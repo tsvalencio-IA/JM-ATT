@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>JM Guinchos - Superadmin</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css?v=jm-financeiro-frota-kpi-v13">
+</head>
+<body>
+  <section id="superLoginView" class="login">
+    <form id="superLoginForm" class="login-card">
+      <div class="brand-row">
+        <div class="brand-mark">JM</div>
+        <div>
+          <h1>Superadmin</h1>
+          <p class="muted small">Configuração técnica do projeto</p>
+        </div>
+      </div>
+      <label for="superEmail">E-mail superadmin</label>
+      <input id="superEmail" type="email" autocomplete="username" required>
+      <div style="height:10px"></div>
+      <label for="superPass">Senha</label>
+      <input id="superPass" type="password" autocomplete="current-password" required>
+      <div style="height:14px"></div>
+      <button class="btn primary" style="width:100%" type="submit">Entrar</button>
+      <div style="height:8px"></div>
+      <button id="superFirstAccessBtn" class="btn" style="width:100%" type="button">Criar primeiro superadmin</button>
+      <p id="superLoginError" class="danger small" style="min-height:18px;margin-top:12px"></p>
+    </form>
+  </section>
+
+  <section id="superAppView" class="hidden">
+    <header class="topbar">
+      <div>
+        <h2 style="margin:0">Superadmin JM Guinchos</h2>
+        <div id="superUserBox" class="muted small"></div>
+      </div>
+      <div class="actions">
+        <button id="superSyncTrackerBtn" class="btn primary">Sincronizar Tracker</button>
+        <button id="superSeedBtn" class="btn">Criar base JM</button>
+        <a class="btn" href="jm.html" style="text-decoration:none">Abrir jm.html</a>
+        <button id="superLogoutBtn" class="btn danger">Sair</button>
+      </div>
+    </header>
+    <main class="content">
+      <div class="grid">
+        <section class="panel col-6">
+          <h2>Cadastro do JM</h2>
+          <form id="companyForm" class="form-grid">
+            <div class="wide"><label>Nome da empresa</label><input id="companyName"></div>
+            <div><label>Cidade base</label><input id="companyCity"></div>
+            <div><label>Telefone operacional</label><input id="companyPhone" inputmode="tel"></div>
+            <button class="btn primary wide" type="submit">Salvar cadastro</button>
+          </form>
+        </section>
+        <section class="panel col-6">
+          <h2>Cadastrar gestor/equipe</h2>
+          <form id="adminUserForm" class="form-grid">
+            <div class="wide"><label>Nome</label><input id="adminName" required></div>
+            <div><label>E-mail</label><input id="adminEmail" type="email" required></div>
+            <div><label>Senha inicial</label><input id="adminPass" type="password" autocomplete="new-password" required></div>
+            <div><label>Perfil</label><select id="adminRole"><option value="owner">Dono/Gestor master</option><option value="admin">Gestor/Admin</option><option value="gerente">Gerente</option><option value="auxiliar">Auxiliar</option><option value="atendente">Atendente</option><option value="finance">Financeiro</option><option value="driver">Motorista</option></select></div>
+            <button class="btn primary wide" type="submit">Criar usuário no Auth</button>
+          </form>
+        </section>
+        <section class="panel col-6">
+          <h2>Tracker</h2>
+          <form id="trackerForm" class="form-grid">
+            <div class="wide"><label>Link da plataforma</label><input id="trackerPlatform"></div>
+            <div class="wide"><label>Endpoint API Tracker</label><input id="trackerEndpoint" placeholder="https://gps2.rafacarrastreadores.com.br/api"></div>
+            <div class="wide"><label>Socket Tracker</label><input id="trackerSocket" placeholder="wss://gps2.rafacarrastreadores.com.br/api/socket"></div>
+            <div class="wide"><label>Token Tracker</label><input id="trackerToken" type="password"></div>
+            <div><label>Header</label><input id="trackerHeader" placeholder="Authorization"></div>
+            <div><label>Prefixo</label><input id="trackerPrefix" placeholder="Bearer "></div>
+            <div><label>Polling ms</label><input id="trackerPolling" inputmode="numeric"></div>
+            <button class="btn primary wide" type="submit">Salvar Tracker</button>
+          </form>
+        </section>
+        <section class="panel col-6">
+          <h2>Rastreadores da frota</h2>
+          <form id="trackerVehiclesForm" class="form-grid">
+            <div><label>FHA4B30 deviceId/uniqueId</label><input id="trackerFha" placeholder="ex.: 81 ou 869412076870093"></div>
+            <div><label>DAJ6J95 deviceId/uniqueId</label><input id="trackerDaj" placeholder="ex.: 81 ou 869412076870093"></div>
+            <button class="btn primary wide" type="submit">Salvar IDs</button>
+          </form>
+          <h2 style="margin-top:18px">Cloudinary</h2>
+          <form id="superCloudForm" class="form-grid">
+            <div><label>Cloud name</label><input id="superCloudName"></div>
+            <div><label>Upload preset</label><input id="superCloudPreset"></div>
+            <button class="btn primary wide" type="submit">Salvar Cloudinary</button>
+          </form>
+          <h2 style="margin-top:18px">Mapa gratuito / Rotas inteligentes</h2>
+          <form id="superGoogleMapsForm" class="form-grid">
+            <div class="wide"><p class="muted small">Sem API paga: o jm.html usa Leaflet/OpenStreetMap, links compartilhados do Google Maps/Waze e coordenadas. A rota aberta no Maps é link externo gratuito.</p><input id="superGoogleMapsKey" type="hidden"></div>
+            <div><label>Idioma</label><input id="superGoogleMapsLanguage" placeholder="pt-BR"></div>
+            <div><label>Região</label><input id="superGoogleMapsRegion" placeholder="BR"></div>
+            <div><label>Centro latitude</label><input id="superGoogleMapsCenterLat" inputmode="decimal" placeholder="-20.8113"></div>
+            <div><label>Centro longitude</label><input id="superGoogleMapsCenterLng" inputmode="decimal" placeholder="-49.3758"></div>
+            <div class="wide"><label>Raio de busca em metros</label><input id="superGoogleMapsRadius" inputmode="numeric" placeholder="90000"></div>
+            <button class="btn primary wide" type="submit">Salvar mapa gratuito</button>
+          </form>
+        </section>
+      </div>
+    </main>
+  </section>
+
+  <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
+  <div id="toast" class="toast"></div>
+
+  <script src="js/config.firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="js/utils.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/tracker.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/superadmin.js?v=jm-financeiro-frota-kpi-v13"></script>
+</body>
+</html>

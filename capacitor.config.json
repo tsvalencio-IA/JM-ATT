@@ -1,0 +1,14 @@
+{
+  "appId": "br.com.thiaguinho.jmguinchos",
+  "appName": "JM Guinchos",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#07111f"
+    }
+  }
+}

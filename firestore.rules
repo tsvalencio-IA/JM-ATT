@@ -1,0 +1,141 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function email() {
+      return request.auth.token.email;
+    }
+    function bootstrapAdminEmail() {
+      return signedIn() && email() in [
+        'jm@jm.com',
+        'tsvalencio@gmail.com'
+      ];
+    }
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isActiveProfile() {
+      return signedIn() && profile().active != false;
+    }
+    function isOwner() {
+      return isActiveProfile()
+        && profile().role in ['admin', 'superadmin', 'gestor', 'manager', 'owner'];
+    }
+    function isFinance() {
+      return isActiveProfile()
+        && profile().role in ['admin', 'finance', 'superadmin', 'gestor', 'gerente', 'manager', 'owner'];
+    }
+    function isManager() {
+      return isFinance();
+    }
+    function isOffice() {
+      return isActiveProfile()
+        && profile().role in ['admin', 'finance', 'superadmin', 'gestor', 'gerente', 'manager', 'owner', 'auxiliar', 'atendente'];
+    }
+    function canManageFleet() {
+      return isActiveProfile()
+        && profile().role in ['admin', 'superadmin', 'gestor', 'gerente', 'manager', 'owner'];
+    }
+    function isDriver() {
+      return isActiveProfile()
+        && profile().role in ['driver', 'motorista'];
+    }
+    function driverPermit() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/driverAccess/$(email()))
+        && get(/databases/$(database)/documents/driverAccess/$(email())).data.active != false
+        && get(/databases/$(database)/documents/driverAccess/$(email())).data.role in ['driver', 'motorista'];
+    }
+    function managerPermit() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/managerAccess/$(email()))
+        && get(/databases/$(database)/documents/managerAccess/$(email())).data.active != false
+        && get(/databases/$(database)/documents/managerAccess/$(email())).data.role in ['admin', 'finance', 'gestor', 'gerente', 'manager', 'owner', 'auxiliar', 'atendente'];
+    }
+    function ownOfficeRepair(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && (bootstrapAdminEmail() || managerPermit())
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == email()
+        && request.resource.data.active == true
+        && request.resource.data.role in ['admin', 'finance', 'gestor', 'gerente', 'owner', 'auxiliar', 'atendente'];
+    }
+    function ownDriverRepair(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && driverPermit()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == email()
+        && request.resource.data.active == true
+        && request.resource.data.role in ['driver', 'motorista'];
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || resource.data.email == email() || isOffice() || isManager());
+      allow create: if signedIn() && (request.auth.uid == uid || isManager() || ownOfficeRepair(uid) || ownDriverRepair(uid));
+      allow update: if isManager() || ownOfficeRepair(uid) || ownDriverRepair(uid) || request.auth.uid == uid;
+      allow delete: if isOwner();
+    }
+
+    match /managerAccess/{emailId} {
+      allow read: if signedIn() && (emailId == email() || isManager() || bootstrapAdminEmail());
+      allow create, update, delete: if isManager() || bootstrapAdminEmail();
+    }
+
+    match /driverAccess/{emailId} {
+      allow read: if signedIn() && (emailId == email() || isManager() || bootstrapAdminEmail());
+      allow create, update, delete: if isManager() || bootstrapAdminEmail();
+    }
+
+    match /vehicles/{id} {
+      allow read: if isOffice() || isDriver();
+      allow create, update: if canManageFleet();
+      allow delete: if canManageFleet();
+    }
+
+    match /calls/{id} {
+      allow read: if isOffice() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow create: if isOffice();
+      allow update: if isOffice() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow delete: if isOwner();
+    }
+
+    match /expenses/{id} {
+      allow read: if isManager() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow create: if (isDriver() && request.resource.data.driverId == request.auth.uid) || isManager();
+      allow update: if isFinance();
+      allow delete: if isOwner();
+    }
+
+    match /transactions/{id} {
+      allow read: if isManager();
+      allow create, update: if isFinance();
+      allow delete: if isOwner();
+    }
+
+    match /maintenance/{id} {
+      allow read: if isManager();
+      allow create, update: if canManageFleet();
+      allow delete: if canManageFleet();
+    }
+
+    match /auditLogs/{id} {
+      allow read: if isOwner();
+      allow create: if isManager();
+      allow update, delete: if false;
+    }
+
+    match /financialCategories/{id} {
+      allow read: if isManager();
+      allow create, update, delete: if isOwner();
+    }
+
+    match /settings/{id} {
+      allow read: if isOffice() || isManager();
+      allow write: if isManager();
+    }
+  }
+}

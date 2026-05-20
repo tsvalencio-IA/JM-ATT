@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>JM Guinchos</title>
+  <link rel="manifest" href="manifest.json?v=jm-financeiro-frota-kpi-v13">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css?v=jm-financeiro-frota-kpi-v13">
+</head>
+<body>
+  <section class="login">
+    <div class="login-card">
+      <div class="brand-row">
+        <div class="brand-mark">JM</div>
+        <div>
+          <h1>JM Guinchos</h1>
+          <p class="muted small">Escolha o painel de acesso</p>
+        </div>
+      </div>
+      <div class="actions" style="display:grid;gap:10px">
+        <a class="btn primary" style="text-align:center;text-decoration:none" href="jm.html">Painel gestor</a>
+        <a class="btn good" style="text-align:center;text-decoration:none" href="motorista.html">Painel motorista</a>
+      </div>
+      <p class="muted small" style="margin-top:18px">Configurações técnicas ficam somente no painel superadmin.</p>
+    </div>
+  </section>
+  <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
+  <script>
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js?v=jm-financeiro-frota-kpi-v13").catch(function(){});
+  </script>
+</body>
+</html>

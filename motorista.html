@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>JM Guinchos - Motorista</title>
+  <link rel="manifest" href="manifest.json?v=jm-financeiro-frota-kpi-v13">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css?v=jm-financeiro-frota-kpi-v13">
+</head>
+<body>
+  <section id="driverLoginView" class="login">
+    <form id="driverLoginForm" class="login-card">
+      <div class="brand-row">
+        <div class="brand-mark">JM</div>
+        <div>
+          <h1>Motorista</h1>
+          <p class="muted small">Chamados, rota e despesas</p>
+        </div>
+      </div>
+      <label for="driverLoginEmail">E-mail</label>
+      <input id="driverLoginEmail" type="email" autocomplete="username" required>
+      <div style="height:10px"></div>
+      <label for="driverLoginPass">Senha</label>
+      <input id="driverLoginPass" type="password" autocomplete="current-password" required>
+      <div style="height:14px"></div>
+      <button class="btn primary" style="width:100%" type="submit">Entrar</button>
+      <p id="driverLoginError" class="danger small" style="min-height:18px;margin-top:12px"></p>
+    </form>
+  </section>
+
+  <section id="driverAppView" class="hidden">
+    <header class="topbar">
+      <div>
+        <h2 style="margin:0">Painel motorista</h2>
+        <div id="driverUserBox" class="muted small"></div>
+      </div>
+      <div class="actions">
+        <button id="driverRefreshBtn" class="btn primary">Atualizar</button>
+        <button id="driverLogoutBtn" class="btn danger">Sair</button>
+      </div>
+    </header>
+    <main class="content">
+      <div class="grid">
+        <section class="panel col-7">
+          <h2>Meus chamados</h2>
+          <div id="driverKpiBox" class="grid"></div>
+          <div id="driverCallsBox"></div>
+        </section>
+        <section class="panel col-5">
+          <h2>Lançar despesa</h2>
+          <form id="driverExpenseForm" class="form-grid">
+            <div class="wide"><label>Chamado</label><select id="driverExpenseCall"></select></div>
+            <div><label>Veículo</label><select id="driverExpenseVehicle"></select></div>
+            <div><label>Tipo</label><select id="driverExpenseType"><option>Combustível</option><option>Pedágio</option><option>Alimentação</option><option>Estacionamento</option><option>Manutenção</option><option>Outros</option></select></div>
+            <div><label>Valor</label><input id="driverExpenseAmount" inputmode="decimal" required></div>
+            <div class="wide"><label>Comprovante/foto</label><input id="driverExpensePhoto" type="file" accept="image/*" capture="environment"></div>
+            <div class="wide"><label>Observação</label><textarea id="driverExpenseNotes"></textarea></div>
+            <button class="btn good wide" type="submit">Enviar relatório</button>
+          </form>
+        </section>
+        <section class="panel col-12">
+          <h2>Mapa dos meus atendimentos</h2>
+          <p class="muted small">O motorista visualiza somente os próprios chamados. Configurações técnicas não aparecem neste painel.</p>
+          <div id="driverMap" class="map"></div>
+        </section>
+      </div>
+    </main>
+  </section>
+
+  <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
+  <div id="toast" class="toast"></div>
+
+  <script src="js/config.firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="js/utils.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/google-maps.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/mapa.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/motorista.js?v=jm-financeiro-frota-kpi-v13"></script>
+</body>
+</html>

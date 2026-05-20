@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#07111f"/>
+  <path d="M84 318h272l40-78h-76l-34-58H178l-34 58H84z" fill="#38bdf8"/>
+  <path d="M126 318h280v54H126z" fill="#e2e8f0"/>
+  <circle cx="172" cy="386" r="34" fill="#22c55e"/>
+  <circle cx="354" cy="386" r="34" fill="#22c55e"/>
+  <path d="M178 186h86l30 54H148z" fill="#0f1c2d"/>
+  <text x="256" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" font-weight="900" fill="#e2e8f0">JM</text>
+</svg>

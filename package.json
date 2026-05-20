@@ -1,0 +1,21 @@
+{
+  "name": "jm-guinchos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PWA/APK de gestao operacional para JM Guinchos.",
+  "scripts": {
+    "serve": "npx http-server . -p 4177 -c-1",
+    "cap:init": "npx cap init \"JM Guinchos\" br.com.thiaguinho.jmguinchos --web-dir .",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npx cap sync android",
+    "check:js": "node --check js/app.js && node --check js/tracker.js && node --check js/mapa.js && node --check js/utils.js && node --check js/firebase.js && node --check js/superadmin.js && node --check js/motorista.js && node --check js/google-maps.js && node --check service-worker.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "latest",
+    "@capacitor/cli": "latest",
+    "@capacitor/core": "latest"
+  },
+  "devDependencies": {
+    "http-server": "latest"
+  }
+}
