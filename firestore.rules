@@ -25,10 +25,15 @@ service cloud.firestore {
     }
     function isFinance() {
       return isActiveProfile()
-        && profile().role in ['admin', 'finance', 'superadmin', 'gestor', 'gerente', 'manager', 'owner'];
+        && profile().role in ['admin', 'finance', 'superadmin', 'gestor', 'manager', 'owner'];
     }
     function isManager() {
-      return isFinance();
+      return isActiveProfile()
+        && profile().role in ['admin', 'superadmin', 'gestor', 'manager', 'owner', 'gerente'];
+    }
+    function canOperateCalls() {
+      return isActiveProfile()
+        && profile().role in ['admin', 'finance', 'superadmin', 'gestor', 'gerente', 'manager', 'owner', 'auxiliar', 'atendente'];
     }
     function isOffice() {
       return isActiveProfile()
@@ -75,19 +80,19 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || resource.data.email == email() || isOffice() || isManager());
-      allow create: if signedIn() && (request.auth.uid == uid || isManager() || ownOfficeRepair(uid) || ownDriverRepair(uid));
-      allow update: if isManager() || ownOfficeRepair(uid) || ownDriverRepair(uid) || request.auth.uid == uid;
+      allow create: if signedIn() && (request.auth.uid == uid || isOwner() || ownOfficeRepair(uid) || ownDriverRepair(uid));
+      allow update: if isOwner() || ownOfficeRepair(uid) || ownDriverRepair(uid) || request.auth.uid == uid;
       allow delete: if isOwner();
     }
 
     match /managerAccess/{emailId} {
       allow read: if signedIn() && (emailId == email() || isManager() || bootstrapAdminEmail());
-      allow create, update, delete: if isManager() || bootstrapAdminEmail();
+      allow create, update, delete: if isOwner() || bootstrapAdminEmail();
     }
 
     match /driverAccess/{emailId} {
       allow read: if signedIn() && (emailId == email() || isManager() || bootstrapAdminEmail());
-      allow create, update, delete: if isManager() || bootstrapAdminEmail();
+      allow create, update, delete: if isOwner() || bootstrapAdminEmail();
     }
 
     match /vehicles/{id} {
@@ -98,44 +103,63 @@ service cloud.firestore {
 
     match /calls/{id} {
       allow read: if isOffice() || (isDriver() && resource.data.driverId == request.auth.uid);
-      allow create: if isOffice();
-      allow update: if isOffice() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow create: if canOperateCalls();
+      allow update: if canOperateCalls() || (isDriver() && resource.data.driverId == request.auth.uid);
       allow delete: if isOwner();
     }
 
     match /expenses/{id} {
       allow read: if isManager() || (isDriver() && resource.data.driverId == request.auth.uid);
-      allow create: if (isDriver() && request.resource.data.driverId == request.auth.uid) || isManager();
+      allow create: if (isDriver() && request.resource.data.driverId == request.auth.uid) || isFinance();
       allow update: if isFinance();
       allow delete: if isOwner();
     }
 
     match /transactions/{id} {
-      allow read: if isManager();
+      allow read: if isFinance();
       allow create, update: if isFinance();
       allow delete: if isOwner();
     }
 
+    match /customers/{id} {
+      allow read: if isOffice() || isFinance();
+      allow create, update: if isOffice() || isFinance();
+      allow delete: if isOwner();
+    }
+
+    match /integrationInbox/{id} {
+      allow read: if canOperateCalls() || isFinance();
+      allow create, update: if canOperateCalls();
+      allow delete: if isOwner();
+    }
+
+    match /callProofs/{id} {
+      allow read: if isOffice() || isFinance() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow create: if (isDriver() && request.resource.data.driverId == request.auth.uid) || canOperateCalls();
+      allow update: if canOperateCalls();
+      allow delete: if isOwner();
+    }
+
     match /maintenance/{id} {
-      allow read: if isManager();
+      allow read: if canManageFleet() || isFinance();
       allow create, update: if canManageFleet();
       allow delete: if canManageFleet();
     }
 
     match /auditLogs/{id} {
       allow read: if isOwner();
-      allow create: if isManager();
+      allow create: if isOffice() || isFinance();
       allow update, delete: if false;
     }
 
     match /financialCategories/{id} {
-      allow read: if isManager();
+      allow read: if isFinance();
       allow create, update, delete: if isOwner();
     }
 
     match /settings/{id} {
-      allow read: if isOffice() || isManager();
-      allow write: if isManager();
+      allow read: if isOffice() || isManager() || isDriver();
+      allow write: if isOwner();
     }
   }
 }

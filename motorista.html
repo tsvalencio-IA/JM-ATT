@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
   <title>JM Guinchos - Motorista</title>
-  <link rel="manifest" href="manifest.json?v=jm-financeiro-frota-kpi-v13">
+  <link rel="manifest" href="manifest.json?v=jm-v18-provas-assinatura-seguradoras">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=jm-financeiro-frota-kpi-v13">
+  <link rel="stylesheet" href="css/style.css?v=jm-v18-provas-assinatura-seguradoras">
 </head>
 <body>
   <section id="driverLoginView" class="login">
@@ -45,7 +45,6 @@
       <div class="grid">
         <section class="panel col-7">
           <h2>Meus chamados</h2>
-          <div id="driverKpiBox" class="grid"></div>
           <div id="driverCallsBox"></div>
         </section>
         <section class="panel col-5">
@@ -53,16 +52,61 @@
           <form id="driverExpenseForm" class="form-grid">
             <div class="wide"><label>Chamado</label><select id="driverExpenseCall"></select></div>
             <div><label>Veículo</label><select id="driverExpenseVehicle"></select></div>
+            <p id="driverExpenseContext" class="small muted wide">Escolha um chamado para puxar veículo, protocolo e seguradora automaticamente.</p>
             <div><label>Tipo</label><select id="driverExpenseType"><option>Combustível</option><option>Pedágio</option><option>Alimentação</option><option>Estacionamento</option><option>Manutenção</option><option>Outros</option></select></div>
             <div><label>Valor</label><input id="driverExpenseAmount" inputmode="decimal" required></div>
             <div class="wide"><label>Comprovante/foto</label><input id="driverExpensePhoto" type="file" accept="image/*" capture="environment"></div>
             <div class="wide"><label>Observação</label><textarea id="driverExpenseNotes"></textarea></div>
-            <button class="btn good wide" type="submit">Enviar relatório</button>
+            <button class="btn good wide" type="submit">Enviar despesa</button>
+          </form>
+        </section>
+        <section class="panel col-5">
+          <h2>Relatório do atendimento</h2>
+          <form id="driverReportForm" class="form-grid">
+            <div class="wide"><label>Chamado</label><select id="driverReportCall"></select></div>
+            <div><label>Checklist</label><select id="driverReportChecklist"><option value="ok">Sem avarias aparentes</option><option value="avaria">Com avaria registrada</option><option value="recusa">Cliente recusou assinatura/foto</option></select></div>
+            <div class="wide"><label>Foto/comprovante</label><input id="driverReportPhoto" type="file" accept="image/*" capture="environment"></div>
+            <div class="wide"><label>Observação</label><textarea id="driverReportNotes" placeholder="Resumo objetivo do atendimento"></textarea></div>
+            <button class="btn primary wide" type="submit">Enviar relatório</button>
+          </form>
+        </section>
+        <section class="panel col-7">
+          <h2>Provas do atendimento</h2>
+          <p class="muted small">Checklist profissional, fotos obrigatórias do veículo guinchado e assinatura do cliente final. Cloudinary guarda os arquivos; Firestore guarda a rastreabilidade.</p>
+          <form id="driverProofForm" class="form-grid">
+            <div class="wide"><label>Chamado</label><select id="driverProofCall"></select></div>
+            <div><label>Retirada</label><select id="proofStageRetirada"><option value="ok">OK</option><option value="avaria">Avaria registrada</option><option value="pendente">Pendente</option></select></div>
+            <div><label>Carregamento</label><select id="proofStageCarregamento"><option value="ok">OK</option><option value="avaria">Avaria registrada</option><option value="pendente">Pendente</option></select></div>
+            <div><label>Transporte</label><select id="proofStageTransporte"><option value="ok">OK</option><option value="intercorrencia">Intercorrência</option><option value="pendente">Pendente</option></select></div>
+            <div><label>Entrega</label><select id="proofStageEntrega"><option value="ok">OK</option><option value="avaria">Avaria registrada</option><option value="pendente">Pendente</option></select></div>
+            <div><label>Finalização</label><select id="proofStageFinalizacao"><option value="ok">OK</option><option value="recusa">Cliente recusou assinar</option><option value="pendente">Pendente</option></select></div>
+            <div class="wide"><label>Observações do checklist</label><textarea id="proofChecklistNotes" placeholder="Descreva avarias, recusa, espera, dificuldade de acesso, diferença de placa ou qualquer ponto para faturamento."></textarea></div>
+            <div><label>Foto frente</label><input id="proofPhotoFront" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Foto traseira</label><input id="proofPhotoRear" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Lateral direita</label><input id="proofPhotoRight" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Lateral esquerda</label><input id="proofPhotoLeft" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Painel / odômetro</label><input id="proofPhotoDashboard" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Avarias</label><input id="proofPhotoDamage" type="file" accept="image/*" capture="environment"></div>
+            <div class="wide"><label>Comprovante final</label><input id="proofPhotoFinal" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Nome do cliente final</label><input id="signatureCustomerName" placeholder="Quem está assinando"></div>
+            <div><label>Documento do cliente</label><input id="signatureCustomerDoc" inputmode="numeric" placeholder="CPF/RG se informado"></div>
+            <div class="wide">
+              <label>Aceite textual</label>
+              <textarea id="signatureAcceptedText">Declaro que acompanhei a remoção/entrega do veículo, conferi as condições registradas nas fotos e autorizo a JM Guinchos a usar este comprovante para fechamento do atendimento e faturamento.</textarea>
+            </div>
+            <div class="wide">
+              <label>Assinatura na tela</label>
+              <canvas id="signatureCanvas" class="signature-pad" width="720" height="260"></canvas>
+              <div class="actions" style="margin-top:8px">
+                <button class="btn" id="clearSignatureBtn" type="button">Limpar assinatura</button>
+              </div>
+            </div>
+            <button class="btn good wide" type="submit">Salvar provas e assinatura</button>
           </form>
         </section>
         <section class="panel col-12">
           <h2>Mapa dos meus atendimentos</h2>
-          <p class="muted small">O motorista visualiza somente os próprios chamados. Configurações técnicas não aparecem neste painel.</p>
+          <p class="muted small">O motorista visualiza somente os próprios chamados. A rota interna usa OpenStreetMap/OSRM e o botão abre navegação externa no Maps/Waze quando houver link salvo.</p>
           <div id="driverMap" class="map"></div>
         </section>
       </div>
@@ -72,14 +116,14 @@
   <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
   <div id="toast" class="toast"></div>
 
-  <script src="js/config.firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/config.firebase.js?v=jm-v18-provas-assinatura-seguradoras"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="js/utils.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/google-maps.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/mapa.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/motorista.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/utils.js?v=jm-v18-provas-assinatura-seguradoras"></script>
+  <script src="js/firebase.js?v=jm-v18-provas-assinatura-seguradoras"></script>
+  <script src="js/google-maps.js?v=jm-v18-provas-assinatura-seguradoras"></script>
+  <script src="js/mapa.js?v=jm-v18-provas-assinatura-seguradoras"></script>
+  <script src="js/motorista.js?v=jm-v18-provas-assinatura-seguradoras"></script>
 </body>
 </html>

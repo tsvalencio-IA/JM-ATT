@@ -1,8 +1,9 @@
-const CACHE_NAME = "jm-guinchos-v13-financeiro-frota-kpi";
+const CACHE_NAME = "jm-guinchos-v18-provas-assinatura-seguradoras";
 const ASSETS = [
   "./",
   "./index.html",
   "./jm.html",
+  "./formulario.html",
   "./motorista.html",
   "./superadmin.html",
   "./manifest.json",

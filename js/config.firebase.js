@@ -1,7 +1,7 @@
 /*
  * JM Guinchos - configuracao central
  * Frontend estatico: qualquer dado neste arquivo fica visivel no GitHub Pages.
- * Para operacao profissional, nao publique token de rastreador neste arquivo.
+ * Para operação profissional, não publique token de rastreador neste arquivo.
  * Cadastre o token no superadmin.html e troque-o sempre que houver exposicao.
  */
 window.JM_CONFIG = {

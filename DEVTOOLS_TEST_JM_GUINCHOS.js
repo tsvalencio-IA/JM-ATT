@@ -1,18 +1,26 @@
-/*
-Teste rápido no Console do navegador após publicar a v13.
-Abra jm.html?v=jm-financeiro-frota-kpi-v13, faça login e cole este script.
-*/
 (function () {
-  const ids = [
-    'financeForm', 'financeTable', 'expenseApproval', 'financeKpiTables',
-    'vehicleForm', 'maintenanceForm', 'maintenanceTable', 'fleetKpiBox',
-    'callsTable', 'teamTable', 'fleetMap'
-  ];
-  const missing = ids.filter((id) => !document.getElementById(id));
-  console.log('JM v13 - elementos ausentes:', missing);
-  console.log('JM.app disponível:', !!(window.JM && window.JM.app));
-  console.log('Estado atual:', window.JM && window.JM.app && window.JM.app.state);
-  if (!missing.length && window.JM && window.JM.app) {
-    alert('JM v13 carregou os módulos principais de financeiro, frota, chamados e equipe. Agora teste salvar/editar/excluir com usuário gestor.');
-  }
+  const ok = (name) => console.log("[OK]", name);
+  const fail = (name, msg) => console.error("[FALHA]", name, msg || "falhou");
+  const warn = (name, msg) => console.warn("[ATENCAO]", name, msg || "atenção");
+
+  console.log("[JM V18] Teste rápido do navegador");
+
+  window.JM && window.JM.utils ? ok("JM.utils carregado") : fail("JM.utils carregado");
+  window.JM && window.JM.firebase ? ok("Firebase carregado") : fail("Firebase carregado");
+  window.JM && window.JM.tracker ? ok("Tracker carregado") : fail("Tracker carregado");
+  window.JM && window.JM.googleMaps ? ok("Roteirizador OSM/OSRM carregado") : fail("Roteirizador OSM/OSRM carregado");
+  window.JM && window.JM.mapa && window.JM.mapa.renderFleetMap ? ok("Mapa Leaflet/OSM carregado") : fail("Mapa Leaflet/OSM carregado");
+
+  const parsed = window.JM.googleMaps && window.JM.googleMaps.parseLocationInput
+    ? window.JM.googleMaps.parseLocationInput("-20.851076,-49.398946")
+    : null;
+  parsed && parsed.coords ? ok("Parser de coordenadas funcionando") : warn("Parser de coordenadas", "função não exposta nesta tela");
+
+  const cfg = window.JM_CONFIG || {};
+  cfg.tracker && cfg.tracker.endpoint ? ok("Endpoint tracker configurado") : warn("Endpoint tracker", "faltando endpoint");
+  cfg.tracker && cfg.tracker.token ? ok("Token tracker presente") : warn("Token tracker", "normal se o token estiver salvo só no Firestore");
+
+  console.log("[JM V18] Teste esperado: abrir jm.html?v=jm-v18-provas-assinatura-seguradoras");
+  console.log("[JM V18] Conferir Central Operacional, filtros, SLA, seleção de chamado/veículo, despacho, rota, copiar link e WhatsApp.");
+  console.log("[JM V18] Criar chamado de seguradora com protocolo, placa, SLA e motorista; depois testar motorista.html.");
 }());

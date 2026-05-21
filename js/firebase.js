@@ -2,7 +2,7 @@
   "use strict";
 
   const cfg = window.JM_CONFIG || {};
-  if (!window.firebase) throw new Error("Firebase SDK nao carregou.");
+  if (!window.firebase) throw new Error("Firebase SDK não carregou.");
   if (!firebase.apps.length) firebase.initializeApp(cfg.firebaseConfig);
   let secondaryApp;
   try {

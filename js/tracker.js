@@ -18,7 +18,15 @@
   }
 
   async function fetchJson(url, headers) {
-    const response = await fetch(url, { method: "GET", headers, cache: "no-store" });
+    let response;
+    try {
+      response = await fetch(url, { method: "GET", headers, cache: "no-store" });
+    } catch (err) {
+      if (err && (err.name === "TypeError" || /failed to fetch|network/i.test(err.message || ""))) {
+        throw new Error("O navegador bloqueou a chamada ao Tracker. Provável CORS/preflight na plataforma RAFA; sem backend/proxy, o painel só consegue sincronizar se o endpoint liberar Authorization para este domínio.");
+      }
+      throw err;
+    }
     if (!response.ok) throw new Error(url + " retornou HTTP " + response.status);
     return response.json();
   }
