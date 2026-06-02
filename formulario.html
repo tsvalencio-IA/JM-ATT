@@ -3,14 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07111f">
+  <meta name="theme-color" content="#07110f">
   <title>JM Guinchos - Briefing do Sistema</title>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <style>
     :root {
-      --bg:#07111f; --panel:#0f1c2d; --panel2:#15243a; --line:#263850; --text:#e6edf7;
-      --muted:#8da2bd; --accent:#38bdf8; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
+      --bg:#07110f; --panel:#0f1c1d; --panel2:#162827; --line:#294342; --text:#edf7f3;
+      --muted:#99b3ac; --accent:#2dd4bf; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
       --radius:8px;
+    }
+    html[data-theme="light"] {
+      --bg:#f4f7fb; --panel:#ffffff; --panel2:#eef4f8; --line:#cbd8e3; --text:#0f172a;
+      --muted:#526173; --accent:#087c89; --green:#15803d; --amber:#b45309; --red:#dc2626;
     }
     * { box-sizing:border-box; }
     body {
@@ -88,6 +92,9 @@
       position:fixed; right:14px; bottom:7px; color:rgba(141,162,189,.78);
       font-size:.66rem; font-weight:850; letter-spacing:.08em; text-transform:uppercase;
     }
+    .theme-toggle { position:fixed; right:14px; bottom:32px; z-index:30; min-height:42px; border-radius:999px; box-shadow:0 14px 34px rgba(0,0,0,.24); }
+    html[data-theme="light"] header { background:rgba(244,247,251,.94); }
+    html[data-theme="light"] input, html[data-theme="light"] select, html[data-theme="light"] textarea { background:#fff; color:var(--text); border-color:#bed0df; }
     @media (max-width:900px) {
       .hero { grid-template-columns:1fr; }
       .col-3,.col-4,.col-6,.col-8 { grid-column:span 12; }
@@ -230,7 +237,7 @@
     </section>
   </main>
 
-  <div class="signature">Powered by thIAguinho Soluções Digitais</div>
+  <div class="signature" aria-hidden="true"></div>
 
   <script>
     (function () {
@@ -358,7 +365,8 @@
       document.getElementById("whatsappBtn").onclick = () => {
         if (!output.value) generate();
         const text = encodeURIComponent(output.value.slice(0, 3500));
-        window.open("https://wa.me/?text=" + text, "_blank");
+        const win = window.open("https://wa.me/?text=" + text, "_blank", "noopener,noreferrer");
+        if (win) win.opener = null;
       };
       document.getElementById("clearBtn").onclick = () => {
         if (!confirm("Limpar todas as respostas deste navegador?")) return;
@@ -369,6 +377,19 @@
       };
       apply(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
       updateProgress();
+      const themeBtn = document.createElement("button");
+      themeBtn.type = "button";
+      themeBtn.className = "btn theme-toggle";
+      function applyTheme(theme) {
+        const next = theme === "light" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        document.documentElement.style.colorScheme = next;
+        localStorage.setItem("jm-theme", next);
+        themeBtn.textContent = next === "light" ? "Modo escuro" : "Modo claro";
+      }
+      applyTheme(localStorage.getItem("jm-theme") || "dark");
+      themeBtn.onclick = () => applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+      document.body.appendChild(themeBtn);
     }());
   </script>
 </body>

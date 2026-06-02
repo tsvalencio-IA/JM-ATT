@@ -222,10 +222,14 @@
 
   function callRoutePoints(call, vehicle) {
     const points = [];
-    const vehiclePoint = pointFrom(vehicle && vehicle.location);
+    const vehiclePoint = pointFrom(vehicle && (vehicle.location || vehicle.mobileLocation || vehicle.driverPhoneLocation || vehicle.phoneLocation));
+    const phonePoint = pointFrom(call && (call.driverPhoneLocation || call.mobileLocation || call.driverLocation));
     const originPoint = pointFrom(call && (call.origem || call.origin));
     const destinationPoint = pointFrom(call && (call.destino || call.destination));
-    if (vehiclePoint) points.push({ label: vehicle && (vehicle.placa || vehicle.apelido) || "Veículo", point: vehiclePoint, kind: "vehicle" });
+    const vehicleGpsSource = String(vehicle && (vehicle.gpsSource || vehicle.trackerStatus || vehicle.source || "") || "").toLowerCase();
+    const vehicleIsPhoneGps = vehiclePoint && /driver_phone|mobile|celular/.test(vehicleGpsSource);
+    if (phonePoint && (!vehiclePoint || call && call.phoneLocationActive)) points.push({ label: "GPS celular do motorista", point: phonePoint, kind: "driver_phone" });
+    else if (vehiclePoint) points.push({ label: vehicleIsPhoneGps ? "GPS celular do motorista" : vehicle && (vehicle.placa || vehicle.apelido) || "Veículo", point: vehiclePoint, kind: vehicleIsPhoneGps ? "driver_phone" : "vehicle" });
     if (originPoint) points.push({ label: call && (call.originLabel || call.origem && call.origem.label) || "Origem", point: originPoint, kind: "origin" });
     (call && Array.isArray(call.routeWaypoints) ? call.routeWaypoints : []).forEach((row, index) => {
       const wp = normalizeWaypoint(row, index);
@@ -324,12 +328,163 @@
     return "muted";
   }
 
+  function applyTheme(theme) {
+    const next = theme === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    document.documentElement.style.colorScheme = next;
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = next === "light" ? "#f4f7fb" : "#07110f";
+    try { localStorage.setItem("jm-theme", next); } catch (_) {}
+    return next;
+  }
+
+  function currentTheme() {
+    try {
+      const saved = localStorage.getItem("jm-theme");
+      if (saved === "light" || saved === "dark") return saved;
+    } catch (_) {}
+    return "dark";
+  }
+
+  function setupThemeToggle() {
+    const theme = applyTheme(currentTheme());
+    if (document.querySelector(".theme-toggle")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn theme-toggle";
+    button.setAttribute("aria-label", "Alternar modo claro e escuro");
+    function render(next) {
+      button.textContent = next === "light" ? "Modo escuro" : "Modo claro";
+      button.title = button.textContent;
+    }
+    render(theme);
+    button.addEventListener("click", () => render(applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light")));
+    document.addEventListener("DOMContentLoaded", () => document.body.appendChild(button), { once: true });
+    if (document.body) document.body.appendChild(button);
+  }
+
+  function setupCollapsiblePanels(root, options) {
+    const scope = typeof root === "string" ? document.querySelector(root) : root || document;
+    if (!scope) return;
+    const cfg = Object.assign({ collapseOnMobile: true, openFirst: 2 }, options || {});
+    const mobile = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
+    const panels = Array.from(scope.querySelectorAll(".panel"));
+
+    function directChild(parent, selector) {
+      return Array.from(parent.children || []).find((el) => el.matches && el.matches(selector)) || null;
+    }
+
+    function panelKey(panel, title, index) {
+      const raw = panel.id || (title.textContent || "painel").trim() || String(index);
+      return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]+/g, "-").replace(/^-|-$/g, "");
+    }
+
+    function invalidateVisuals() {
+      setTimeout(() => {
+        try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+        if (window.JM && window.JM.mapa && typeof window.JM.mapa.invalidateAll === "function") {
+          try { window.JM.mapa.invalidateAll(); } catch (_) {}
+        }
+      }, 140);
+    }
+
+    panels.forEach((panel, index) => {
+      if (!panel || panel.dataset.noCollapse === "true" || panel.classList.contains("no-collapse") || panel.closest(".login")) return;
+
+      let head = directChild(panel, ".panel-collapse-head");
+      let body = directChild(panel, ".panel-collapse-body");
+      let title = head ? head.querySelector("h2,h3") : directChild(panel, "h2,h3");
+      if (!title && body) title = body.querySelector(":scope > h2,:scope > h3");
+      if (!title) return;
+
+      if (!head) {
+        head = document.createElement("div");
+        head.className = "panel-collapse-head";
+        panel.insertBefore(head, panel.firstChild);
+      }
+      if (title.parentElement !== head) head.insertBefore(title, head.firstChild);
+
+      if (!body) {
+        body = document.createElement("div");
+        body.className = "panel-collapse-body";
+        Array.from(panel.childNodes).forEach((node) => {
+          if (node !== head && node !== body) body.appendChild(node);
+        });
+        panel.appendChild(body);
+      } else {
+        Array.from(panel.childNodes).forEach((node) => {
+          if (node !== head && node !== body) body.appendChild(node);
+        });
+      }
+
+      let button = Array.from(head.children || []).find((el) => el.classList && el.classList.contains("panel-collapse-toggle"));
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn panel-collapse-toggle";
+        head.appendChild(button);
+      }
+
+      const rawTitle = (title.textContent || "painel").trim() || "painel";
+      const keyBase = panelKey(panel, title, index);
+      const storageKey = "jm-panel-collapsed:" + location.pathname + ":" + keyBase;
+      const isMapPanel = !!body.querySelector(".map,.ops-map,#map,#driverMap,#operationMap,#fleetMap,#dashboardMap");
+      const isCriticalForm = !!body.querySelector("#callForm,#financeForm,#paymentForm,#maintenanceForm,#driverProofForm,#driverExpenseForm,#driverReportForm,#superMobileGpsForm");
+
+      panel.classList.add("is-collapsible");
+      body.setAttribute("data-panel-body", "true");
+      button.setAttribute("aria-label", "Minimizar ou maximizar " + rawTitle);
+      button.setAttribute("title", "Minimizar ou maximizar este painel");
+
+      function setCollapsed(collapsed, persist) {
+        const isCollapsed = !!collapsed;
+        panel.classList.toggle("is-collapsed", isCollapsed);
+        panel.classList.toggle("collapsed", isCollapsed);
+        body.hidden = isCollapsed;
+        body.setAttribute("aria-hidden", String(isCollapsed));
+        button.textContent = isCollapsed ? "Maximizar" : "Minimizar";
+        button.setAttribute("aria-expanded", String(!isCollapsed));
+        if (persist !== false) {
+          try { localStorage.setItem(storageKey, isCollapsed ? "1" : "0"); } catch (_) {}
+        }
+        if (!isCollapsed) invalidateVisuals();
+      }
+
+      if (button.dataset.listenerReady !== "1") {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setCollapsed(!panel.classList.contains("is-collapsed"));
+        });
+        button.dataset.listenerReady = "1";
+      }
+
+      let saved = null;
+      try { saved = localStorage.getItem(storageKey); } catch (_) {}
+      if (panel.dataset.collapsibleReady !== "1") {
+        const shouldCollapse = saved === "1" || (saved == null && mobile && cfg.collapseOnMobile && index >= Number(cfg.openFirst || 0) && !isMapPanel && !isCriticalForm);
+        setCollapsed(shouldCollapse, false);
+        panel.dataset.collapsibleReady = "1";
+      } else {
+        setCollapsed(panel.classList.contains("is-collapsed") || body.hidden, false);
+      }
+    });
+  }
+
+
   window.JM = window.JM || {};
   window.JM.utils = {
     $, $all, esc, money, parseMoney, dateTime, todayInput, slug, plateKey,
     isValidPlate, digits, maskPhone, phoneWhatsappUrl, maskCpf, maskCnpj, validateCpf, validateCnpj,
     STATUS_DEFS, statusKey, statusLabel, isFinalStatus,
     uidSafe, coords, pointFrom, isPoint, roundPoint, haversineKm, callRoutePoints,
-    routeKm, geometryToFirestore, geometryToGeoJson, geoJsonToLatLngs, geometryKm, mapsRouteUrl, normalizeUrl, toast, statusClass
+    routeKm, geometryToFirestore, geometryToGeoJson, geoJsonToLatLngs, geometryKm, mapsRouteUrl, normalizeUrl, toast, statusClass,
+    applyTheme, currentTheme, setupThemeToggle, setupCollapsiblePanels
   };
+  setupThemeToggle();
 }());

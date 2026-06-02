@@ -1,9 +1,9 @@
-(function () {
+﻿(function () {
   const ok = (name) => console.log("[OK]", name);
   const fail = (name, msg) => console.error("[FALHA]", name, msg || "falhou");
   const warn = (name, msg) => console.warn("[ATENCAO]", name, msg || "atenção");
 
-  console.log("[JM V18] Teste rápido do navegador");
+  console.log("[JM V20] Teste rápido do navegador");
 
   window.JM && window.JM.utils ? ok("JM.utils carregado") : fail("JM.utils carregado");
   window.JM && window.JM.firebase ? ok("Firebase carregado") : fail("Firebase carregado");
@@ -20,7 +20,7 @@
   cfg.tracker && cfg.tracker.endpoint ? ok("Endpoint tracker configurado") : warn("Endpoint tracker", "faltando endpoint");
   cfg.tracker && cfg.tracker.token ? ok("Token tracker presente") : warn("Token tracker", "normal se o token estiver salvo só no Firestore");
 
-  console.log("[JM V18] Teste esperado: abrir jm.html?v=jm-v18-provas-assinatura-seguradoras");
-  console.log("[JM V18] Conferir Central Operacional, filtros, SLA, seleção de chamado/veículo, despacho, rota, copiar link e WhatsApp.");
-  console.log("[JM V18] Criar chamado de seguradora com protocolo, placa, SLA e motorista; depois testar motorista.html.");
+  console.log("[JM V20] Teste esperado: abrir jm.html?v=jm-v20-entrega-final-operacional");
+  console.log("[JM V20] Conferir Central Operacional, filtros, SLA, seleção de chamado/veículo, despacho, rota, copiar link e WhatsApp.");
+  console.log("[JM V20] Criar chamado de seguradora com protocolo, placa, SLA e motorista; depois testar motorista.html.");
 }());

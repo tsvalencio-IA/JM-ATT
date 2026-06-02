@@ -9,8 +9,8 @@ service cloud.firestore {
     }
     function bootstrapAdminEmail() {
       return signedIn() && email() in [
-        'jm@jm.com',
-        'tsvalencio@gmail.com'
+        'jm@jm.com.br',
+        'jm@jm.com'
       ];
     }
     function profile() {
@@ -53,6 +53,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/driverAccess/$(email())).data.active != false
         && get(/databases/$(database)/documents/driverAccess/$(email())).data.role in ['driver', 'motorista'];
     }
+    function publicCallActive(token) {
+      return exists(/databases/$(database)/documents/publicCalls/$(token))
+        && get(/databases/$(database)/documents/publicCalls/$(token)).data.revoked != true;
+    }
     function managerPermit() {
       return signedIn()
         && exists(/databases/$(database)/documents/managerAccess/$(email()))
@@ -77,11 +81,47 @@ service cloud.firestore {
         && request.resource.data.active == true
         && request.resource.data.role in ['driver', 'motorista'];
     }
+    function bootstrapOwnerRepair(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && bootstrapAdminEmail()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == email()
+        && request.resource.data.active == true
+        && request.resource.data.role in ['superadmin', 'admin', 'owner'];
+    }
+    function selfProfileUpdate(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.active == resource.data.active
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nome', 'phone', 'photoUrl', 'lastLoginAt', 'deviceInfo', 'fcmToken',
+          'updatedAt', 'updatedBy'
+        ]);
+    }
+    function driverCallUpdate() {
+      return isDriver()
+        && resource.data.driverId == request.auth.uid
+        && request.resource.data.driverId == resource.data.driverId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'statusKey', 'closedAt', 'closedBy', 'closedByEmail', 'locked',
+          'phoneLocationActive', 'driverPhoneLocation', 'mobileLocation',
+          'driverLocation', 'phoneLocationUpdatedAt', 'gpsSource',
+          'driverReports', 'proofChecklist', 'proofPhotos', 'customerSignature',
+          'proofStatus', 'proofMissingPhotos', 'proofUpdatedAt', 'proofUpdatedBy',
+          'proofLogWarning', 'proofLogWarningAt', 'billingStatus',
+          'timeline', 'updatedAt'
+        ]);
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || resource.data.email == email() || isOffice() || isManager());
-      allow create: if signedIn() && (request.auth.uid == uid || isOwner() || ownOfficeRepair(uid) || ownDriverRepair(uid));
-      allow update: if isOwner() || ownOfficeRepair(uid) || ownDriverRepair(uid) || request.auth.uid == uid;
+      allow create: if isOwner() || bootstrapOwnerRepair(uid) || ownOfficeRepair(uid) || ownDriverRepair(uid);
+      allow update: if isOwner() || bootstrapOwnerRepair(uid) || ownOfficeRepair(uid) || ownDriverRepair(uid) || selfProfileUpdate(uid);
       allow delete: if isOwner();
     }
 
@@ -97,14 +137,22 @@ service cloud.firestore {
 
     match /vehicles/{id} {
       allow read: if isOffice() || isDriver();
-      allow create, update: if canManageFleet();
+      allow create: if canManageFleet();
+      allow update: if canManageFleet()
+        || (isDriver()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'location', 'mobileLocation', 'driverPhoneLocation', 'gpsSource', 'trackerStatus',
+            'lastPhoneGpsAt', 'lastTrackerAt', 'activeCallId', 'activeDriverId', 'activeDriverName',
+            'updatedAt', 'updatedBy'
+          ])
+          && request.resource.data.activeDriverId == request.auth.uid);
       allow delete: if canManageFleet();
     }
 
     match /calls/{id} {
       allow read: if isOffice() || (isDriver() && resource.data.driverId == request.auth.uid);
       allow create: if canOperateCalls();
-      allow update: if canOperateCalls() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow update: if canOperateCalls() || driverCallUpdate();
       allow delete: if isOwner();
     }
 
@@ -140,6 +188,34 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
+    match /trackerProviders/{id} {
+      allow read: if isOffice() || isManager();
+      allow create, update, delete: if isOwner() || bootstrapAdminEmail();
+    }
+
+    match /publicCalls/{token} {
+      allow get: if resource.data.revoked != true;
+      allow list: if false;
+      allow create: if canOperateCalls();
+      allow update: if canOperateCalls()
+        || (isDriver()
+          && resource.data.revoked != true
+          && resource.data.callId == request.resource.data.callId
+          && request.resource.data.revoked != true);
+      allow delete: if isOwner();
+
+      match /messages/{messageId} {
+        allow read: if publicCallActive(token) || canOperateCalls();
+        allow create: if (
+          request.auth == null
+          && publicCallActive(token)
+          && get(/databases/$(database)/documents/publicCalls/$(token)).data.chatEnabled != false
+          && request.resource.data.senderType == 'client'
+        ) || canOperateCalls();
+        allow update, delete: if canOperateCalls();
+      }
+    }
+
     match /maintenance/{id} {
       allow read: if canManageFleet() || isFinance();
       allow create, update: if canManageFleet();
@@ -158,7 +234,7 @@ service cloud.firestore {
     }
 
     match /settings/{id} {
-      allow read: if isOffice() || isManager() || isDriver();
+      allow read: if isOffice() || isManager() || (signedIn() && id in ['public', 'publicIntegrations']);
       allow write: if isOwner();
     }
   }

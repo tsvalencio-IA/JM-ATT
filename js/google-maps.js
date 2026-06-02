@@ -5,10 +5,31 @@
   const DEFAULT_SPEED_KMH = 48;
   const DEFAULT_OSRM_URL = "https://router.project-osrm.org/route/v1/driving";
   const routeCache = new Map();
+  let googleMapsPromise = null;
 
   function toLatLng(value) {
     const p = pointFrom(value);
-    return p ? { lat: Number(p.lat), lng: Number(p.lng) } : null;
+    if (!p) return null;
+    const lat = Number(p.lat);
+    const lng = Number(p.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return null;
+    return { lat, lng };
+  }
+
+  function vehiclePoint(vehicle) {
+    return toLatLng(vehicle && (
+      vehicle.location ||
+      vehicle.lastLocation ||
+      vehicle.lastKnownLocation ||
+      vehicle.trackerLocation ||
+      vehicle.trackerLastLocation ||
+      vehicle.trackerPosition ||
+      vehicle.lastPosition ||
+      vehicle.mobileLocation ||
+      vehicle.driverPhoneLocation ||
+      vehicle.phoneLocation
+    ));
   }
 
   function cleanText(value) {
@@ -99,10 +120,196 @@
     return true;
   }
 
-  async function initAutocomplete(inputId, onSelect) {
+  function googleApiKey(settings) {
+    return String(settings && (settings.apiKey || settings.mapsKey || settings.googleMapsKey) || "").trim();
+  }
+
+  function isGoogleConfigured(settings) {
+    return !!googleApiKey(settings);
+  }
+
+  function searchSuffix(settings) {
+    return cleanText(settings && (settings.searchSuffix || settings.defaultSearchSuffix || settings.city || settings.defaultCity));
+  }
+
+  function looksLikeFullAddress(text) {
+    const raw = cleanText(text).toLowerCase();
+    return /\b(sp|rj|mg|pr|sc|rs|go|mt|ms|ba|pe|ce|brasil|brazil)\b/.test(raw) || raw.includes("sao jose") || raw.includes("são jose");
+  }
+
+  function searchQueries(text, settings) {
+    const raw = cleanText(text);
+    const suffix = searchSuffix(settings);
+    if (!raw || !suffix || looksLikeFullAddress(raw)) return [raw];
+    return [raw + ", " + suffix, raw];
+  }
+
+  function biasBox(settings) {
+    const center = toLatLng(settings && settings.center);
+    const radius = Number(settings && settings.radiusMeters || 90000);
+    if (!center || !Number.isFinite(radius) || radius <= 0) return null;
+    const latDelta = radius / 111320;
+    const lngDelta = radius / (111320 * Math.max(0.25, Math.cos(center.lat * Math.PI / 180)));
+    return {
+      west: center.lng - lngDelta,
+      south: center.lat - latDelta,
+      east: center.lng + lngDelta,
+      north: center.lat + latDelta,
+      center
+    };
+  }
+
+  function googlePlaceUrl(value) {
+    const point = toLatLng(value);
+    if (point) return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(point.lat + "," + point.lng);
+    const text = cleanText(value);
+    return text ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(text) : "";
+  }
+
+  function loadGoogleMaps(settings) {
+    const key = googleApiKey(settings);
+    if (!key) return Promise.resolve(false);
+    if (window.google && window.google.maps) return Promise.resolve(true);
+    if (googleMapsPromise) return googleMapsPromise;
+    googleMapsPromise = new Promise((resolve, reject) => {
+      const callbackName = "__jmGoogleMapsReady";
+      window[callbackName] = () => resolve(true);
+      const script = document.createElement("script");
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => reject(new Error("Não consegui carregar o Google Maps. Verifique a chave salva no superadmin."));
+      script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&libraries=places,geometry,marker&v=weekly&loading=async&callback=" + callbackName;
+      document.head.appendChild(script);
+    }).catch((err) => {
+      googleMapsPromise = null;
+      throw err;
+    });
+    return googleMapsPromise;
+  }
+
+  function geocodeWithGoogle(text, settings) {
+    return loadGoogleMaps(settings).then((ok) => new Promise((resolve, reject) => {
+      if (!ok || !window.google || !google.maps.Geocoder) return reject(new Error("Google Maps não está configurado."));
+      const geocoder = new google.maps.Geocoder();
+      const box = biasBox(settings);
+      const request = { address: text, region: settings && settings.region || "BR" };
+      if (box && google.maps.LatLngBounds) {
+        request.bounds = new google.maps.LatLngBounds(
+          new google.maps.LatLng(box.south, box.west),
+          new google.maps.LatLng(box.north, box.east)
+        );
+      }
+      geocoder.geocode(request, (results, status) => {
+        if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
+          const loc = results[0].geometry.location;
+          return resolve({
+            label: results[0].formatted_address || text,
+            coords: { lat: loc.lat(), lng: loc.lng() },
+            source: "google_geocoding",
+            provider: "google_maps",
+            raw: text,
+            externalUrl: googlePlaceUrl(results[0].formatted_address || text),
+            placeId: results[0].place_id || "",
+            resolvedAt: new Date().toISOString()
+          });
+        }
+        reject(new Error("O Google Maps não localizou este endereço. Confira bairro, cidade e número."));
+      });
+    }));
+  }
+
+  function chooseBestNominatim(rows, settings) {
+    const list = Array.isArray(rows) ? rows.filter(Boolean) : [];
+    if (!list.length) return null;
+    const box = biasBox(settings);
+    return list.map((row) => {
+      const point = coords(row.lat, row.lon);
+      let score = Number(row.importance || 0);
+      if (row.type === "house" || row.addresstype === "building") score += 0.35;
+      if (row.class === "highway" || row.type === "street") score += 0.12;
+      if (box && point) {
+        const km = haversineKm(point, box.center);
+        score += Math.max(0, 0.35 - (km / 240));
+      }
+      return { row, score };
+    }).sort((a, b) => b.score - a.score)[0].row;
+  }
+
+  async function geocodeWithNominatim(text, settings) {
+    const queries = searchQueries(text, settings);
+    const box = biasBox(settings);
+    let rows = [];
+    let response = null;
+    for (const query of queries) {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("limit", "5");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("q", query);
+    url.searchParams.set("countrycodes", String(settings && settings.country || "br").toLowerCase());
+    if (box) url.searchParams.set("viewbox", [box.west, box.north, box.east, box.south].join(","));
+    response = await fetch(url.toString(), { headers: { "Accept": "application/json" }, cache: "no-store" });
+    if (!response.ok) throw new Error("Busca gratuita de endereço indisponível agora. Cole um link do Maps ou coordenadas.");
+    rows = await response.json();
+    if (rows && rows.length) break;
+    }
+    const hit = chooseBestNominatim(rows, settings);
+    if (!hit) throw new Error("Não encontrei esse endereço na busca gratuita. Digite cidade/UF ou cole o link do Google Maps.");
+    const point = coords(hit.lat, hit.lon);
+    if (!point) throw new Error("O endereço foi encontrado, mas veio sem coordenadas utilizáveis.");
+    return {
+      label: hit.display_name || text,
+      coords: point,
+      source: "nominatim_openstreetmap",
+      provider: "openstreetmap",
+      raw: text,
+      externalUrl: googlePlaceUrl(hit.display_name || text),
+      resolvedAt: new Date().toISOString()
+    };
+  }
+
+  async function initAutocomplete(inputId, onSelect, settings) {
     const input = document.getElementById(inputId);
     if (!input) return null;
     input.setAttribute("autocomplete", "off");
+    if (isGoogleConfigured(settings || {})) {
+      try {
+        await loadGoogleMaps(settings || {});
+        if (window.google && google.maps.places) {
+          const country = String(settings && (settings.country || settings.region) || "BR").toLowerCase().slice(0, 2);
+          const box = biasBox(settings || {});
+          const options = {
+            componentRestrictions: { country },
+            fields: ["formatted_address", "geometry", "name", "place_id"],
+            strictBounds: false
+          };
+          if (box && google.maps.LatLngBounds) {
+            options.bounds = new google.maps.LatLngBounds(
+              new google.maps.LatLng(box.south, box.west),
+              new google.maps.LatLng(box.north, box.east)
+            );
+          }
+          const autocomplete = new google.maps.places.Autocomplete(input, options);
+          autocomplete.addListener("place_changed", () => {
+            const place = autocomplete.getPlace();
+            if (place && place.geometry && place.geometry.location && typeof onSelect === "function") {
+              onSelect({
+                label: place.formatted_address || place.name || input.value,
+                coords: { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() },
+                source: "google_places_autocomplete",
+                provider: "google_maps",
+                raw: input.value,
+                externalUrl: googlePlaceUrl(place.formatted_address || input.value),
+                placeId: place.place_id || "",
+                resolvedAt: new Date().toISOString()
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("Autocomplete Google indisponível, mantendo busca manual gratuita:", err);
+      }
+    }
     input.addEventListener("change", () => {
       const parsed = parseLocationInput(input.value);
       if (parsed && parsed.coords && typeof onSelect === "function") onSelect(parsed);
@@ -110,12 +317,14 @@
     return null;
   }
 
-  async function geocode(text) {
+  async function geocode(text, settings) {
     const parsed = parseLocationInput(text);
-    if (!parsed || !parsed.coords) {
-      throw new Error("Cole um link do mapa que mostre latitude/longitude ou informe no formato -20.851076,-49.398946. Links curtos do Google nem sempre trazem coordenadas visíveis para leitura automática.");
+    if (parsed && parsed.coords) return parsed;
+    if (!parsed || !parsed.raw) throw new Error("Informe endereço, link do mapa ou coordenadas.");
+    if (isGoogleConfigured(settings || {})) {
+      try { return await geocodeWithGoogle(parsed.raw, settings || {}); } catch (err) { console.warn(err); }
     }
-    return parsed;
+    return geocodeWithNominatim(parsed.raw, settings || {});
   }
 
   function estimateRoute(a, b, label) {
@@ -255,10 +464,10 @@
     const target = toLatLng(origin);
     if (!target) throw new Error("Origem sem coordenadas para calcular a rota.");
     const dest = toLatLng(destination);
-    const located = Object.values(vehicles || {}).filter((v) => toLatLng(v.location));
+    const located = Object.values(vehicles || {}).filter((v) => vehiclePoint(v));
     const serviceRouteShared = dest ? await routeThroughPoints([target, dest], settings || {}) : null;
     const rankings = await Promise.all(located.map(async (vehicle) => {
-      const vPoint = toLatLng(vehicle.location);
+      const vPoint = vehiclePoint(vehicle);
       const toOrigin = await routeThroughPoints([vPoint, target], settings || {});
       const fullRoute = await routeThroughPoints([vPoint, target, dest].filter(Boolean), settings || {});
       const score = (toOrigin ? toOrigin.durationSeconds : 999999) + statusPenalty(vehicle);
@@ -283,8 +492,13 @@
     extractCoordinatePair,
     extractCoordinatePairs,
     isConfigured,
+    isGoogleConfigured,
+    loadGoogleMaps,
     initAutocomplete,
     geocode,
+    geocodeWithGoogle,
+    geocodeWithNominatim,
+    googlePlaceUrl,
     estimateRoute,
     routeThroughPoints,
     osrmRoute,

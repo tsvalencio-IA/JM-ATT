@@ -1,0 +1,30 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "mobileGps": {
+      ".read": "auth != null",
+      "vehicles": {
+        ".read": "auth != null",
+        "$vehicleId": {
+          ".write": "auth != null && newData.hasChildren(['lat','lng','driverId','vehicleId','updatedAt']) && newData.child('driverId').val() == auth.uid && newData.child('vehicleId').val() == $vehicleId",
+          ".validate": "newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('driverId').isString() && newData.child('vehicleId').isString() && (newData.child('updatedAt').isString() || newData.child('updatedAt').isNumber())"
+        }
+      },
+      "calls": {
+        ".read": "auth != null",
+        "$callId": {
+          ".write": "auth != null && newData.hasChildren(['lat','lng','driverId','callId','updatedAt']) && newData.child('driverId').val() == auth.uid && newData.child('callId').val() == $callId",
+          ".validate": "newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('driverId').isString() && newData.child('callId').isString() && (newData.child('updatedAt').isString() || newData.child('updatedAt').isNumber())"
+        }
+      },
+      "drivers": {
+        ".read": "auth != null",
+        "$driverId": {
+          ".write": "auth != null && auth.uid == $driverId",
+          ".validate": "newData.hasChildren(['lat','lng','driverId','updatedAt']) && newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('driverId').val() == auth.uid && (newData.child('updatedAt').isString() || newData.child('updatedAt').isNumber())"
+        }
+      }
+    }
+  }
+}

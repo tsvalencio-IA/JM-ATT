@@ -1,4 +1,4 @@
-const CACHE_NAME = "jm-guinchos-v18-provas-assinatura-seguradoras";
+const CACHE_NAME = "jm-v28-1-rota-preco-pedagio-inteligente";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,8 @@ const ASSETS = [
   "./formulario.html",
   "./motorista.html",
   "./superadmin.html",
+  "./cliente-chamado.html",
+  "./relatorio.html",
   "./manifest.json",
   "./css/style.css",
   "./js/config.firebase.js",
@@ -14,6 +16,7 @@ const ASSETS = [
   "./js/tracker.js",
   "./js/google-maps.js",
   "./js/mapa.js",
+  "./js/toll-plazas.js",
   "./js/app.js",
   "./js/motorista.js",
   "./js/superadmin.js",
@@ -24,7 +27,6 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => null));
 });
-
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()

@@ -53,7 +53,22 @@
     return map;
   }
 
-  function normalizePosition(raw, deviceMap) {
+  function normalizeProvider(provider) {
+    return Object.assign({
+      providerId: "",
+      name: "",
+      providerType: "rafa",
+      active: true,
+      priority: 50,
+      tokenHeader: "Authorization",
+      tokenPrefix: "Bearer ",
+      pollingMs: 30000,
+      timeoutMs: 15000
+    }, provider || {});
+  }
+
+  function normalizePosition(raw, deviceMap, provider) {
+    provider = normalizeProvider(provider || {});
     const lat = Number(raw.lat ?? raw.latitude ?? raw.y ?? raw.Latitude);
     const lng = Number(raw.lng ?? raw.lon ?? raw.longitude ?? raw.x ?? raw.Longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -74,12 +89,15 @@
       ignition: Boolean(raw.ignition ?? raw.ignicao ?? raw.acc ?? attrs.ignition ?? attrs.ignicao ?? false),
       rawStatus: raw.status || raw.situacao || attrs.status || "online",
       address: raw.address || "",
-      source: "tracker",
+      providerId: provider.id || provider.providerId || "",
+      providerType: provider.providerType || "rafa",
+      source: provider.providerType || "tracker",
       capturedAt: raw.fixTime || raw.deviceTime || raw.serverTime || raw.timestamp || raw.time || raw.dataHora || new Date().toISOString()
     };
   }
 
   async function fetchTrackerPositions(config) {
+    config = normalizeProvider(config);
     if (!config || !config.endpoint || !config.token) return [];
     const endpoint = String(config.endpoint || "").replace(/\/+$/, "");
     const headers = trackerHeaders(config);
@@ -100,7 +118,7 @@
     }
 
     const deviceMap = makeDeviceMap(devicesPayload);
-    return flattenTrackerPayload(positionsPayload).map((p) => normalizePosition(p, deviceMap)).filter(Boolean);
+    return flattenTrackerPayload(positionsPayload).map((p) => normalizePosition(p, deviceMap, config)).filter(Boolean);
   }
 
   function cleanKey(value) {
@@ -118,6 +136,10 @@
       vehicle && vehicle.placa,
       vehicle && vehicle.trackerId,
       vehicle && vehicle.trackerDeviceId,
+      vehicle && vehicle.trackerExternalId,
+      vehicle && vehicle.trackerImei,
+      vehicle && vehicle.trackerPlate,
+      vehicle && vehicle.trackerName,
       vehicle && vehicle.trackerUniqueId,
       vehicle && vehicle.uniqueId,
       vehicle && vehicle.deviceId,
@@ -165,6 +187,42 @@
     return "";
   }
 
+  function providerMatchesVehicle(provider, vehicle) {
+    if (!provider || !vehicle) return true;
+    const wanted = cleanKey(vehicle.trackerProviderId);
+    if (!wanted) return true;
+    return wanted === cleanKey(provider.id || provider.providerId) || wanted === cleanKey(provider.providerType);
+  }
+
+  function positionToVehicleUpdate(pos, vehicle, match, provider, now) {
+    return {
+      placa: vehicle.placa || (match ? match.id : pos.deviceName || pos.plate || match && match.id || fallbackVehicleId(pos)),
+      apelido: vehicle.apelido || pos.deviceName || "",
+      tipo: vehicle.tipo || "",
+      location: { lat: pos.lat, lng: pos.lng },
+      trackerId: pos.trackerId,
+      trackerProviderId: provider && (provider.id || provider.providerId) || pos.providerId || "",
+      trackerProviderType: provider && provider.providerType || pos.providerType || "",
+      trackerDeviceId: pos.deviceId || "",
+      trackerExternalId: pos.trackerId || pos.deviceId || "",
+      trackerUniqueId: pos.uniqueId || "",
+      trackerDeviceName: pos.deviceName || "",
+      trackerMatched: Boolean(match),
+      trackerUnmapped: !match,
+      trackerMatchKey: match && match.key || "",
+      trackerSource: pos.source,
+      trackerLastSource: pos.source,
+      trackerStatus: pos.rawStatus,
+      trackerAddress: pos.address || "",
+      speed: pos.speed,
+      ignition: pos.ignition,
+      lastTrackerAt: pos.capturedAt,
+      trackerLastUpdateAt: pos.capturedAt,
+      lastTrackerSyncAt: now,
+      updatedAt: now
+    };
+  }
+
   async function syncTrackerToFirestore(config, db, vehicles) {
     const positions = await fetchTrackerPositions(config);
     if (!positions.length) return [];
@@ -180,32 +238,115 @@
       pos.trackerMatched = Boolean(match);
       pos.trackerMatchKey = match && match.key || "";
       const ref = db.collection("vehicles").doc(vehicleId);
-      batch.set(ref, {
-        placa: vehicle.placa || (match ? vehicleId : pos.deviceName || pos.plate || vehicleId),
-        apelido: vehicle.apelido || pos.deviceName || "",
-        tipo: vehicle.tipo || "",
-        location: { lat: pos.lat, lng: pos.lng },
-        trackerId: pos.trackerId,
-        trackerDeviceId: pos.deviceId || "",
-        trackerUniqueId: pos.uniqueId || "",
-        trackerDeviceName: pos.deviceName || "",
-        trackerMatched: Boolean(match),
-        trackerUnmapped: !match,
-        trackerMatchKey: match && match.key || "",
-        trackerSource: pos.source,
-        trackerStatus: pos.rawStatus,
-        trackerAddress: pos.address || "",
-        speed: pos.speed,
-        ignition: pos.ignition,
-        lastTrackerAt: pos.capturedAt,
-        lastTrackerSyncAt: now,
-        updatedAt: now
-      }, { merge: true });
+      batch.set(ref, positionToVehicleUpdate(pos, vehicle, match, config || {}, now), { merge: true });
     });
     await batch.commit();
     return positions;
   }
 
+  async function syncProviderToFirestore(provider, db, vehicles) {
+    provider = normalizeProvider(provider);
+    if (provider.active === false || ["manual", "mobile_gps"].includes(provider.providerType)) return [];
+    const positions = await fetchTrackerPositions(provider);
+    if (!positions.length) return [];
+    const knownVehicles = mergeVehicleSources(provider.vehicles, vehicles);
+    const batch = db.batch();
+    const now = new Date().toISOString();
+    let matchedCount = 0;
+    positions.forEach((pos) => {
+      const candidates = Object.fromEntries(Object.entries(knownVehicles || {}).filter(([, vehicle]) => providerMatchesVehicle(provider, vehicle)));
+      const match = findVehicleMatch(pos, Object.keys(candidates).length ? candidates : knownVehicles);
+      const vehicleId = match && match.id || fallbackVehicleId(pos);
+      if (!vehicleId) return;
+      const vehicle = match && match.vehicle || knownVehicles[vehicleId] || {};
+      pos.vehicleId = vehicleId;
+      pos.trackerMatched = Boolean(match);
+      pos.trackerMatchKey = match && match.key || "";
+      if (match) matchedCount += 1;
+      batch.set(db.collection("vehicles").doc(vehicleId), positionToVehicleUpdate(pos, vehicle, match, provider, now), { merge: true });
+    });
+    batch.set(db.collection("trackerProviders").doc(provider.id || provider.providerId), {
+      lastSyncAt: now,
+      lastLocatedCount: positions.length,
+      lastMatchedCount: matchedCount,
+      lastError: ""
+    }, { merge: true });
+    await batch.commit();
+    return positions;
+  }
+
+  async function syncAllTrackersToFirestore(options) {
+    const db = options && options.db;
+    const vehicles = options && options.vehicles || {};
+    const legacyTracker = options && options.legacyTracker || {};
+    const providers = (options && options.providers || []).filter(Boolean).map(normalizeProvider)
+      .filter((p) => p.active !== false)
+      .sort((a, b) => Number(a.priority || 50) - Number(b.priority || 50));
+    const activeProviders = providers.length ? providers : (legacyTracker && legacyTracker.endpoint ? [Object.assign({ id: "rafa", providerType: "rafa", priority: 1 }, legacyTracker)] : []);
+    const all = [];
+    for (const provider of activeProviders) {
+      try {
+        const rows = await syncProviderToFirestore(provider, db, vehicles);
+        all.push(...rows);
+      } catch (err) {
+        console.warn("Falha no rastreador", provider.name || provider.id || provider.providerType, err);
+        if (db && (provider.id || provider.providerId)) {
+          await db.collection("trackerProviders").doc(provider.id || provider.providerId).set({
+            lastSyncAt: new Date().toISOString(),
+            lastError: err && err.message || String(err)
+          }, { merge: true }).catch(() => {});
+        }
+      }
+    }
+    return all;
+  }
+
+  function getNormalizedFleetPositions(vehicles, mobileGps) {
+    const rows = [];
+    Object.values(vehicles || {}).forEach((vehicle) => {
+      const p = window.JM.utils.pointFrom(vehicle && vehicle.location);
+      let hasTrackerPoint = false;
+      if (p) {
+        hasTrackerPoint = !String(vehicle.gpsSource || vehicle.trackerLastSource || vehicle.trackerSource || "").includes("driver_phone");
+        rows.push({
+          vehicleId: vehicle.id || vehicle.placa,
+          driverId: vehicle.activeDriverId || "",
+          providerId: vehicle.trackerProviderId || "",
+          providerType: vehicle.trackerProviderType || "",
+          source: vehicle.trackerLastSource || vehicle.trackerSource || "tracker",
+          lat: p.lat,
+          lng: p.lng,
+          speed: vehicle.speed || 0,
+          heading: vehicle.heading || 0,
+          ignition: vehicle.ignition,
+          address: vehicle.trackerAddress || "",
+          accuracy: vehicle.accuracy || "",
+          updatedAt: vehicle.trackerLastUpdateAt || vehicle.lastTrackerAt || vehicle.updatedAt || "",
+          raw: vehicle
+        });
+      }
+      const phone = mobileGps && mobileGps[vehicle.id || vehicle.placa];
+      const pp = window.JM.utils.pointFrom(phone && (phone.point || phone.location || phone));
+      if (pp && !hasTrackerPoint) {
+        rows.push({
+          vehicleId: vehicle.id || vehicle.placa,
+          driverId: phone.driverId || vehicle.activeDriverId || "",
+          providerId: "mobile_gps",
+          providerType: "mobile_gps",
+          source: "mobile_phone",
+          lat: pp.lat,
+          lng: pp.lng,
+          accuracy: phone.accuracy || phone.point && phone.point.accuracy || "",
+          speed: phone.speed || phone.point && phone.point.speed || 0,
+          heading: phone.heading || phone.point && phone.point.heading || 0,
+          updatedAt: phone.updatedAt || phone.capturedAt || "",
+          raw: phone
+        });
+      }
+    });
+    return rows;
+  }
+
   window.JM = window.JM || {};
-  window.JM.tracker = { fetchTrackerPositions, syncTrackerToFirestore, normalizePosition, joinUrl };
+  window.JM.tracker = { fetchTrackerPositions, syncTrackerToFirestore, syncAllTrackersToFirestore, syncProviderToFirestore, normalizePosition, getNormalizedFleetPositions, joinUrl };
 }());
