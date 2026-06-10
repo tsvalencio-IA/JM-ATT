@@ -4,7 +4,7 @@
   const { $, esc, parseMoney, toast, statusClass, routeKm, mapsRouteUrl, statusKey, statusLabel, isFinalStatus, setupCollapsiblePanels, pointFrom } = window.JM.utils;
   const { auth, db, arrayUnion, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
-  const DRIVER_FLOW_VERSION = "jm-v28-4-rota-checklist-hotfix";
+  const DRIVER_FLOW_VERSION = "jm-v28-5-firestore-callsize-motorista";
   const state = { user: null, profile: null, calls: {}, vehicles: {}, expenses: {}, settings: {}, selectedCallId: "", driverLivePoint: null };
   const unsubscribers = [];
   let driverLocationWatchId = null;
@@ -737,6 +737,58 @@
   }
 
   function damageVehicleSvg(type) {
+    const flatType = String(type || "carro").toLowerCase();
+    if (flatType === "moto") {
+      return `<svg viewBox="0 0 920 520" role="img" aria-label="Prancha tecnica 2D de moto para checklist de avarias">
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="36" width="848" height="448" rx="18" fill="rgba(15,23,42,.42)" stroke="rgba(148,163,184,.26)" stroke-width="2"/>
+          <line x1="90" y1="260" x2="830" y2="260" stroke="rgba(148,163,184,.20)" stroke-width="2" stroke-dasharray="12 12"/>
+          <circle cx="230" cy="300" r="66" fill="rgba(15,23,42,.88)" stroke="#e2e8f0" stroke-width="10"/>
+          <circle cx="690" cy="300" r="66" fill="rgba(15,23,42,.88)" stroke="#e2e8f0" stroke-width="10"/>
+          <path d="M285 292 L410 215 L540 215 L650 292" stroke="#e2e8f0" stroke-width="18"/>
+          <path d="M415 215 L462 310 L535 215" stroke="#38bdf8" stroke-width="12"/>
+          <path d="M540 215 L606 158 L685 158" stroke="#e2e8f0" stroke-width="12"/>
+          <path d="M392 212 L332 170 L278 170" stroke="#e2e8f0" stroke-width="12"/>
+          <rect x="440" y="166" width="112" height="34" rx="16" fill="rgba(56,189,248,.22)" stroke="#38bdf8" stroke-width="6"/>
+          <text x="460" y="438" fill="#94a3b8" font-size="28" font-weight="800" text-anchor="middle">MOTO - VISTA LATERAL 2D</text>
+        </g>
+      </svg>`;
+    }
+    if (flatType === "caminhao") {
+      return `<svg viewBox="0 0 920 520" role="img" aria-label="Prancha tecnica 2D de caminhao para checklist de avarias">
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="36" width="848" height="448" rx="18" fill="rgba(15,23,42,.42)" stroke="rgba(148,163,184,.26)" stroke-width="2"/>
+          <rect x="118" y="164" width="506" height="172" rx="16" fill="rgba(15,23,42,.74)" stroke="#e2e8f0" stroke-width="10"/>
+          <rect x="624" y="188" width="178" height="148" rx="22" fill="rgba(15,23,42,.88)" stroke="#e2e8f0" stroke-width="10"/>
+          <rect x="662" y="214" width="86" height="52" rx="10" fill="rgba(56,189,248,.18)" stroke="#38bdf8" stroke-width="6"/>
+          <line x1="154" y1="250" x2="584" y2="250" stroke="#38bdf8" stroke-width="7" stroke-dasharray="18 14"/>
+          <line x1="154" y1="202" x2="584" y2="202" stroke="rgba(226,232,240,.55)" stroke-width="4"/>
+          <line x1="154" y1="300" x2="584" y2="300" stroke="rgba(226,232,240,.55)" stroke-width="4"/>
+          <circle cx="226" cy="360" r="42" fill="rgba(15,23,42,.94)" stroke="#e2e8f0" stroke-width="9"/>
+          <circle cx="598" cy="360" r="42" fill="rgba(15,23,42,.94)" stroke="#e2e8f0" stroke-width="9"/>
+          <circle cx="748" cy="360" r="42" fill="rgba(15,23,42,.94)" stroke="#e2e8f0" stroke-width="9"/>
+          <text x="460" y="438" fill="#94a3b8" font-size="28" font-weight="800" text-anchor="middle">GUINCHO - PERFIL 2D</text>
+        </g>
+      </svg>`;
+    }
+    return `<svg viewBox="0 0 920 520" role="img" aria-label="Prancha tecnica 2D de automovel para checklist de avarias">
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="36" y="36" width="848" height="448" rx="18" fill="rgba(15,23,42,.42)" stroke="rgba(148,163,184,.26)" stroke-width="2"/>
+        <path d="M166 258 C166 155 252 116 460 116 C668 116 754 155 754 258 C754 365 668 404 460 404 C252 404 166 365 166 258 Z" fill="rgba(15,23,42,.78)" stroke="#e2e8f0" stroke-width="10"/>
+        <path d="M306 154 C368 130 552 130 614 154 L574 226 C512 212 408 212 346 226 Z" fill="rgba(56,189,248,.16)" stroke="#38bdf8" stroke-width="7"/>
+        <path d="M346 294 C408 310 512 310 574 294 L612 366 C550 390 370 390 308 366 Z" fill="rgba(56,189,248,.10)" stroke="#38bdf8" stroke-width="7"/>
+        <line x1="230" y1="258" x2="690" y2="258" stroke="rgba(226,232,240,.45)" stroke-width="4" stroke-dasharray="14 12"/>
+        <line x1="312" y1="154" x2="252" y2="258" stroke="rgba(226,232,240,.55)" stroke-width="5"/>
+        <line x1="608" y1="154" x2="668" y2="258" stroke="rgba(226,232,240,.55)" stroke-width="5"/>
+        <line x1="308" y1="366" x2="252" y2="258" stroke="rgba(226,232,240,.55)" stroke-width="5"/>
+        <line x1="612" y1="366" x2="668" y2="258" stroke="rgba(226,232,240,.55)" stroke-width="5"/>
+        <circle cx="238" cy="176" r="20" fill="rgba(15,23,42,.95)" stroke="#e2e8f0" stroke-width="6"/>
+        <circle cx="682" cy="176" r="20" fill="rgba(15,23,42,.95)" stroke="#e2e8f0" stroke-width="6"/>
+        <circle cx="238" cy="340" r="20" fill="rgba(15,23,42,.95)" stroke="#e2e8f0" stroke-width="6"/>
+        <circle cx="682" cy="340" r="20" fill="rgba(15,23,42,.95)" stroke="#e2e8f0" stroke-width="6"/>
+        <text x="460" y="444" fill="#94a3b8" font-size="28" font-weight="800" text-anchor="middle">AUTOMOVEL - VISTA SUPERIOR 2D</text>
+      </g>
+    </svg>`;
     if (String(type || "") === "moto") {
       return `<svg viewBox="0 0 920 520" role="img" aria-label="Prancha técnica de moto para checklist de avarias">
         <defs>
@@ -1376,6 +1428,7 @@
   }
 
   async function saveDriverLocationPoint(callId, pos, options) {
+    callId = normalizeCallIdInput(callId);
     options = options || {};
     if (!isMobileGpsEnabled()) {
       throw new Error("Módulo de localização por celular desativado no superadmin.");
@@ -1492,10 +1545,16 @@
     return point;
   }
 
+  function normalizeCallIdInput(value) {
+    if (typeof value !== "string") return "";
+    const id = value.trim();
+    return id && state.calls[id] ? id : "";
+  }
+
   async function startDriverPhoneLocation(callIdOverride) {
     if (!isMobileGpsEnabled()) return toast("Módulo de localização por celular desativado no superadmin.", "danger");
     if (!navigator.geolocation) return toast("Este celular/navegador não liberou geolocalização.", "danger");
-    const callId = callIdOverride || $("driverLocationCall") && $("driverLocationCall").value;
+    const callId = normalizeCallIdInput(callIdOverride) || normalizeCallIdInput($("driverLocationCall") && $("driverLocationCall").value);
     const call = callId && state.calls[callId];
     const vehicleId = (call && (call.vehicleId || call.vehicle || call.truckId || "")) || ($("driverLocationVehicle") && $("driverLocationVehicle").value) || "";
     if (!call && !vehicleId) return toast("Selecione um chamado ativo ou o veículo atual para enviar a localização do celular.", "danger");

@@ -259,13 +259,41 @@
     return null;
   }
 
+  function compactGeometryPoints(points, maxPoints) {
+    const clean = (points || []).filter(Boolean);
+    const limit = Math.max(2, Number(maxPoints || 220));
+    if (clean.length <= limit) return clean;
+    const out = [];
+    const last = clean.length - 1;
+    const step = last / (limit - 1);
+    let previousIndex = -1;
+    for (let i = 0; i < limit; i += 1) {
+      const index = i === limit - 1 ? last : Math.round(i * step);
+      if (index !== previousIndex && clean[index]) out.push(clean[index]);
+      previousIndex = index;
+    }
+    return out;
+  }
+
+  function roundGeometryCoord(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.round(n * 1000000) / 1000000 : 0;
+  }
+
   function geometryToFirestore(geometry) {
     if (!geometry || geometry.type !== "LineString" || !Array.isArray(geometry.coordinates)) return null;
-    const coordinates = geometry.coordinates
+    const originalPoints = geometry.coordinates
       .map(geometryPointFromStore)
-      .filter(Boolean)
-      .map((p) => ({ lng: p.lng, lat: p.lat }));
-    return coordinates.length >= 2 ? { type: "LineString", coordinates } : null;
+      .filter(Boolean);
+    const coordinates = compactGeometryPoints(originalPoints, 220)
+      .map((p) => ({ lng: roundGeometryCoord(p.lng), lat: roundGeometryCoord(p.lat) }));
+    if (coordinates.length < 2) return null;
+    return {
+      type: "LineString",
+      coordinates,
+      simplified: originalPoints.length > coordinates.length,
+      originalPointCount: originalPoints.length
+    };
   }
 
   function geometryToGeoJson(geometry) {

@@ -1,0 +1,45 @@
+JM Guinchos v28-5 - Firestore call size, motorista e checklist 2D
+
+Arquivos alterados:
+- js/utils.js
+- js/app.js
+- js/motorista.js
+- css/style.css
+- firestore.rules
+- database.rules.json
+- service-worker.js
+- jm.html
+- motorista.html
+- index.html
+- superadmin.html
+- cliente-chamado.html
+- relatorio.html
+- LISTA_ARQUIVOS_ALTERADOS_V28_5.txt
+
+Correcoes:
+- Chamado nao salva: geometria de rota agora e simplificada antes de gravar no Firestore.
+- Protecao extra: payload do chamado e medido antes do save; se ficar grande, remove geometria e preserva resumo de rota/preco.
+- Motorista nao ve chamado: driverId agora e resolvido tambem pelo motorista vinculado ao veiculo selecionado.
+- GPS do motorista: evento de clique nao pode mais virar callId no RTDB.
+- Checklist: prancha do veiculo trocada para desenho tecnico 2D, sem visual 3D.
+- Regras: firestore.rules e database.rules.json alinhados com os campos usados por motorista, GPS, evidencias e finalizacao.
+
+Validacoes executadas:
+- node --check js/app.js
+- node --check js/motorista.js
+- node --check js/utils.js
+- node --check js/google-maps.js
+- node --check js/mapa.js
+- node --check js/firebase.js
+- node --check js/tracker.js
+- node --check js/superadmin.js
+- node --check js/toll-plazas.js
+- node --check service-worker.js
+- JSON.parse(database.rules.json)
+- Teste de geometria: 5000 pontos viraram 220 pontos e 7186 bytes.
+- Teste HTTP local: jm.html, motorista.html, app.js, motorista.js, utils.js e service-worker.js servidos com jm-v28-5-firestore-callsize-motorista.
+
+Pendencias operacionais:
+- Remover no Firebase RTDB o no antigo mobileGps/calls/_object PointerEvent_.
+- Publicar firestore.rules e database.rules.json antes de testar GPS/evidencias do motorista em producao.
+- Cloudinary precisa estar configurado no superadmin com cloudName e uploadPreset para envio de fotos/assinaturas.

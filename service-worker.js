@@ -1,4 +1,4 @@
-const CACHE_NAME = "jm-v28-4-rota-checklist-hotfix";
+const CACHE_NAME = "jm-v28-5-firestore-callsize-motorista";
 const ASSETS = [
   "./",
   "./index.html",

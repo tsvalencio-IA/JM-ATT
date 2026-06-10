@@ -10,7 +10,7 @@
   const { auth, secondaryAuth, db, ts, arrayUnion, emailIsAdmin, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
   const SYSTEM_SIGNATURE = "";
-  const LOGIN_FLOW_VERSION = "jm-v28-4-rota-checklist-hotfix";
+  const LOGIN_FLOW_VERSION = "jm-v28-5-firestore-callsize-motorista";
   let trackerTimer = null;
   let trackerBusy = false;
   let mapRefreshTimer = null;
@@ -312,6 +312,45 @@
       calculatedAt: state.smartRoute && state.smartRoute.calculatedAt || new Date().toISOString(),
       algorithm: "tracker_position + openstreetmap_osrm_route + fallback_haversine + status_penalty"
     };
+  }
+
+  function payloadSizeBytes(value) {
+    try {
+      const text = JSON.stringify(value || {});
+      return window.Blob ? new Blob([text]).size : text.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function stripStoredRouteGeometry(route) {
+    if (!route || !route.geometry) return route || null;
+    const out = Object.assign({}, route);
+    out.geometryPointCount = route.geometry.originalPointCount || route.geometry.coordinates && route.geometry.coordinates.length || 0;
+    out.geometryStored = false;
+    delete out.geometry;
+    return out;
+  }
+
+  function prepareCallDataForFirestore(data) {
+    let out = Object.assign({}, data || {});
+    out.routeStorageMode = out.routeGeometry ? "simplified_geometry" : "summary_only";
+    out.routePayloadBytes = payloadSizeBytes(out);
+    if (out.routePayloadBytes <= 900000) return out;
+
+    const metrics = Object.assign({}, out.routeMetrics || {});
+    metrics.bestToOrigin = stripStoredRouteGeometry(metrics.bestToOrigin);
+    metrics.serviceRoute = stripStoredRouteGeometry(metrics.serviceRoute);
+    metrics.fullRoute = stripStoredRouteGeometry(metrics.fullRoute);
+    out.routeMetrics = metrics;
+    if (out.routeGeometry) {
+      out.routeGeometryPointCount = out.routeGeometry.originalPointCount || out.routeGeometry.coordinates && out.routeGeometry.coordinates.length || 0;
+      out.routeGeometry = null;
+    }
+    out.routeStorageMode = "summary_only_oversize_guard";
+    out.routeStorageWarning = "Geometria completa nao foi salva no chamado para respeitar limite de 1 MB do Firestore.";
+    out.routePayloadBytes = payloadSizeBytes(out);
+    return out;
   }
 
   function personName() {
@@ -1390,6 +1429,30 @@
     return points;
   }
 
+  function userIdByEmail(rawEmail) {
+    const email = String(rawEmail || "").toLowerCase().trim();
+    if (!email) return "";
+    const row = Object.values(state.users || {}).find((u) => String(u.email || "").toLowerCase().trim() === email);
+    return row && row.id || "";
+  }
+
+  function driverIdFromVehicle(vehicle) {
+    const v = vehicle || {};
+    const direct = v.driverId || v.activeDriverId || v.driverUid || v.motoristaId || v.assignedDriverId || "";
+    if (direct && state.users[direct]) return direct;
+    if (direct && !String(direct).includes("@")) return direct;
+    return userIdByEmail(direct || v.driverEmail || v.activeDriverEmail || v.motoristaEmail || v.assignedDriverEmail);
+  }
+
+  function selectedDriverIdForCall() {
+    const explicit = $("callDriver") && $("callDriver").value || "";
+    if (explicit) return explicit;
+    const vehicle = state.vehicles[$("callVehicle") && $("callVehicle").value] || null;
+    const resolved = driverIdFromVehicle(vehicle);
+    if (resolved && $("callDriver")) setValue("callDriver", resolved);
+    return resolved || "";
+  }
+
   function addressFromInputs(kind) {
     const isOrigin = kind === "origin";
     const label = $(isOrigin ? "callOriginLabel" : "callDestLabel").value.trim();
@@ -1538,6 +1601,8 @@
 
   function applySmartVehicle(vehicleId) {
     if ($("callVehicle")) $("callVehicle").value = vehicleId || "";
+    const driverId = driverIdFromVehicle(state.vehicles[vehicleId] || null);
+    if (driverId && $("callDriver")) setValue("callDriver", driverId);
     toast("Veículo aplicado ao chamado.", "ok");
   }
 
@@ -2532,6 +2597,8 @@ Rota: ${url}`;
     if (($("callSource") && /segur|assist/i.test($("callSource").value)) && $("callInsuranceProtocol") && !$("callInsuranceProtocol").value.trim()) {
       return toast("Chamado de seguradora/assistência precisa de protocolo para não perder o rastreio do acionamento.", "danger");
     }
+    const selectedVehicleId = $("callVehicle").value;
+    const selectedDriverId = selectedDriverIdForCall();
     const best = bestSmartRoute();
     const routePoints = routePointsFromForm(true);
     const externalRouteUrl = currentExternalRouteUrl();
@@ -2576,8 +2643,8 @@ Rota: ${url}`;
       customerPlate,
       customerVehicle: $("callCustomerVehicle") ? $("callCustomerVehicle").value.trim() : "",
       extraKm: $("callExtraKm") ? parseMoney($("callExtraKm").value) : 0,
-      vehicleId: $("callVehicle").value,
-      driverId: $("callDriver").value,
+      vehicleId: selectedVehicleId,
+      driverId: selectedDriverId,
       originLabel: originAddress.label,
       destLabel: destinationAddress && destinationAddress.label || "",
       origin: storePoint(originAddress.coords),
@@ -2604,12 +2671,13 @@ Rota: ${url}`;
       baseData.pricingSuggestion = pricingResult.pricingSuggestion;
       if (pricingResult.costEstimate) baseData.costEstimate = pricingResult.costEstimate;
     }
+    const callDataForSave = prepareCallDataForFirestore(baseData);
     try {
       if (state.editingCallId) {
         if (!canOwnCompany() && !hasRole(["gerente"])) return toast("Somente gestor/dono ou gerente pode editar chamados.", "danger");
         const current = state.calls[state.editingCallId] || {};
-        const nextKey = currentStatusKey(current) || ($("callDriver").value ? "despachado" : "aguardando_despacho");
-        await db.collection("calls").doc(state.editingCallId).set(Object.assign({}, baseData, {
+        const nextKey = currentStatusKey(current) || (selectedDriverId ? "despachado" : "aguardando_despacho");
+        await db.collection("calls").doc(state.editingCallId).set(Object.assign({}, callDataForSave, {
           status: statusLabel(nextKey),
           statusKey: nextKey,
           updatedAt: now,
@@ -2624,8 +2692,8 @@ Rota: ${url}`;
         return;
       }
       const protocolo = "JM-" + now.replace(/\D/g, "").slice(2, 14);
-      const initialKey = $("callDriver").value ? "despachado" : "aguardando_despacho";
-      const callRef = await db.collection("calls").add(Object.assign({}, baseData, {
+      const initialKey = selectedDriverId ? "despachado" : "aguardando_despacho";
+      const callRef = await db.collection("calls").add(Object.assign({}, callDataForSave, {
         protocolo,
         status: statusLabel(initialKey),
         statusKey: initialKey,
@@ -2644,6 +2712,9 @@ Rota: ${url}`;
       }
       resetCallForm();
       toast("Chamado registrado com dados de rota.", "ok");
+    } catch (err) {
+      console.error("Falha ao salvar chamado", err);
+      toast("Falha ao salvar chamado: " + (err && err.message || "verifique Firebase, regras e tamanho do documento."), "danger");
     } finally {
       setButtonBusy(submitBtn, false);
     }
@@ -4864,6 +4935,10 @@ Rota: ${url}`;
     if ($("btnTowUseRouteKm")) $("btnTowUseRouteKm").onclick = applyRouteKmToTowPricing;
     if ($("btnUseSuggestedPrice")) $("btnUseSuggestedPrice").onclick = applySuggestedPriceToForm;
     if ($("btnTowApplyToPrice")) $("btnTowApplyToPrice").onclick = applyTowTotalToPrice;
+    if ($("callVehicle")) $("callVehicle").onchange = () => {
+      const driverId = driverIdFromVehicle(state.vehicles[$("callVehicle").value] || null);
+      if (driverId && $("callDriver") && !$("callDriver").value) setValue("callDriver", driverId);
+    };
     ["callTowActive", "callTowKm", "callTowFranchiseKm", "callTowBaseOut", "callTowKmValue", "callTowDiscountPct", "callTowTollOneWay", "callTowRoundTrip", "callTowSubtractFranchise", "callTowTollRoundTrip", "callTowNotes"].forEach((id) => {
       const handler = () => {
         calculateTowPricing();
