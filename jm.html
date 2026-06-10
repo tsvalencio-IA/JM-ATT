@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
   <title>JM Guinchos - Gestor</title>
-  <link rel="manifest" href="manifest.json?v=jm-financeiro-frota-kpi-v13">
+  <link rel="manifest" href="manifest.json?v=jm-v28-5-firestore-callsize-motorista">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=jm-financeiro-frota-kpi-v13">
+  <link rel="stylesheet" href="css/style.css?v=jm-v28-5-firestore-callsize-motorista">
 </head>
 <body>
   <section id="loginView" class="login">
@@ -31,23 +31,34 @@
   </section>
 
   <section id="appView" class="app hidden">
-    <aside class="sidebar">
+    <aside class="sidebar" id="appSidebar">
       <div class="sidebar-head">
-        <div class="brand-row" style="margin-bottom:0">
+        <div class="brand-row sidebar-brand" style="margin-bottom:0">
           <div class="brand-mark">JM</div>
           <div>
             <div class="sidebar-title">JM GUINCHOS</div>
             <div class="sidebar-sub">gestão operacional</div>
           </div>
         </div>
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Recolher menu" aria-label="Recolher menu" aria-pressed="false">☰</button>
       </div>
-      <nav class="nav" id="navButtons">
-        <button data-view="dashboard" class="active">Dashboard</button>
-        <button data-view="chamados">Chamados</button>
-        <button data-view="mapa">Mapa / Tracker</button>
-        <button data-view="financeiro">Financeiro</button>
-        <button data-view="frota">Frota</button>
-        <button data-view="equipe">Equipe</button>
+      <nav class="nav" id="navButtons" aria-label="Módulos principais">
+        <div class="nav-group-title">Operação</div>
+        <button data-view="dashboard" data-icon="DB" class="active">Dashboard</button>
+        <button data-view="operacao" data-icon="CO">Central Operacional</button>
+        <button data-view="chamados" data-icon="CH">Chamados</button>
+        <button data-view="finalizados" data-icon="OK">Finalizados</button>
+        <button data-view="mapa" data-icon="MP">Mapa / Tracker</button>
+        <button data-view="assistente" data-icon="IA">Assistente IA</button>
+        <div class="nav-group-title">Comercial</div>
+        <button data-view="clientes" data-icon="CL">Clientes / Seguradoras</button>
+        <button data-view="integracoes" data-icon="IN">Integrações</button>
+        <div class="nav-group-title">Financeiro</div>
+        <button data-view="financeiro" data-icon="FN">Financeiro</button>
+        <button data-view="pagamentos" data-icon="PG">Pagamentos</button>
+        <div class="nav-group-title">Administração</div>
+        <button data-view="frota" data-icon="FR">Frota</button>
+        <button data-view="equipe" data-icon="EQ">Equipe</button>
       </nav>
       <div class="sidebar-foot">
         <div id="userBox" class="small muted"></div>
@@ -73,8 +84,17 @@
             <div class="card kpi col-3"><span>Receita do mês</span><strong id="kpiRevenue">R$ 0,00</strong></div>
             <div class="card kpi col-3"><span>Despesas pendentes</span><strong id="kpiExpenses">R$ 0,00</strong></div>
             <div class="card kpi col-3"><span>Frota online</span><strong id="kpiOnline">0</strong></div>
+            <div id="dashboardOpsKpis" class="col-12 dash-kpi-grid"></div>
             <div class="panel col-7">
-              <h2>Mapa operacional</h2>
+              <div class="panel-head">
+                <h2>Mapa operacional</h2>
+                <label class="map-layer-control">Mapa
+                  <select class="mapProviderSelect" aria-label="Tipo de mapa">
+                    <option value="google_road">Google Road</option>
+                    <option value="google_hybrid">Google Híbrido</option>
+                  </select>
+                </label>
+              </div>
               <div id="dashboardMap" class="map"></div>
             </div>
             <div class="panel col-5">
@@ -84,22 +104,109 @@
           </div>
         </section>
 
+        <section id="view-operacao" class="view">
+          <div class="ops-shell">
+            <div class="ops-head panel">
+              <div>
+                <h2>Central operacional 24h</h2>
+                <p class="muted small">Despacho em tempo real para seguradoras, particulares, socorros, muncks e remoções. Mapa vivo com Tracker RAFA, Google Road/Híbrido e rotas por ruas.</p>
+              </div>
+              <div class="ops-filters">
+                <select id="opsStatusFilter" aria-label="Filtro de status operacional">
+                  <option value="ativos">Chamados ativos</option>
+                  <option value="todos">Todos</option>
+                  <option value="aguardando_despacho">Aguardando despacho</option>
+                  <option value="despachado">Despachado</option>
+                  <option value="motorista_a_caminho">Motorista a caminho</option>
+                  <option value="motorista_no_local">Motorista no local</option>
+                  <option value="veiculo_carregado">Veículo carregado</option>
+                  <option value="em_transporte">Em transporte</option>
+                  <option value="entregue">Entregue</option>
+                  <option value="finalizado">Finalizado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+                <select id="opsPriorityFilter" aria-label="Filtro de prioridade">
+                  <option value="">Todas prioridades</option>
+                  <option value="normal">Normal</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+                <select id="opsInsuranceFilter" aria-label="Filtro de seguradora"></select>
+                <select id="opsDriverFilter" aria-label="Filtro de motorista"></select>
+                <select id="opsVehicleFilter" aria-label="Filtro de veículo"></select>
+                <button class="btn primary" id="btnOpsRefreshTracker" type="button">Atualizar Tracker</button>
+                <button class="btn" id="btnOpsNewCall" type="button">Novo chamado</button>
+              </div>
+            </div>
+
+            <div id="opsKpis" class="ops-kpis grid"></div>
+
+            <div class="ops-grid">
+              <section class="panel ops-map-panel">
+                <div class="actions" style="justify-content:space-between;margin-bottom:10px">
+                  <div>
+                    <h2 style="margin-bottom:4px">Mapa vivo de despacho</h2>
+                    <div id="opsMapHint" class="muted small">Selecione um chamado e um veículo para destacar rota, origem e destino.</div>
+                  </div>
+                  <div class="actions">
+                    <label class="map-layer-control">Mapa
+                      <select class="mapProviderSelect" aria-label="Tipo de mapa da operação">
+                        <option value="google_road">Google Road</option>
+                        <option value="google_hybrid">Google Híbrido</option>
+                      </select>
+                    </label>
+                    <button class="btn good" id="btnOpsAssignVehicle" type="button">Despachar veículo selecionado</button>
+                    <button class="btn" id="btnOpsOpenRoute" type="button">Abrir rota</button>
+                    <button class="btn" id="btnOpsCopyRoute" type="button">Copiar link</button>
+                  </div>
+                </div>
+                <div id="operationMap" class="map ops-map"></div>
+              </section>
+
+              <aside class="ops-side">
+                <section class="panel">
+                  <h2>Fila de chamados</h2>
+                  <div id="opsCallsList" class="ops-list"></div>
+                </section>
+                <section class="panel">
+                  <h2>Frota online</h2>
+                  <div id="opsVehiclesList" class="ops-list"></div>
+                </section>
+              </aside>
+            </div>
+          </div>
+        </section>
+
         <section id="view-chamados" class="view">
           <div class="grid">
             <div class="panel col-5">
               <h2>Novo chamado</h2>
               <form id="callForm" class="form-grid">
+                <div class="wide"><label>Cliente cadastrado</label><select id="callCustomerId"></select></div>
                 <div><label>Cliente</label><input id="callClient" required></div>
                 <div><label>WhatsApp</label><input id="callPhone" inputmode="tel"></div>
-                <div><label>Serviço</label><select id="callType"><option>Guincho</option><option>Munck</option><option>Socorro</option><option>Remoção</option></select></div>
+                <div><label>Serviço</label><select id="callType"><option>Guincho</option><option>Munck</option><option>Socorro</option><option>Remoção</option><option>Patio</option><option>Seguradora</option></select></div>
                 <div><label>Valor previsto</label><input id="callPrice" inputmode="decimal" placeholder="0,00"></div>
-                <div><label>Veículo</label><select id="callVehicle"></select></div>
+                <div><label>Origem comercial</label><select id="callSource"><option value="Particular">Particular</option><option value="Seguradora">Seguradora</option><option value="Assistência 24h">Assistência 24h</option><option value="Empresa parceira">Empresa parceira</option><option value="Pátio/convênio">Pátio/convênio</option></select></div>
+                <div><label>Prioridade/SLA</label><select id="callPriority"><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></div>
+                <div><label>Seguradora / assistência</label><input id="callInsurance" placeholder="Ex: Porto, Allianz, Suhai..."></div>
+                <div><label>Protocolo seguradora</label><input id="callInsuranceProtocol" placeholder="Protocolo / acionamento"></div>
+                <div><label>Sinistro / apólice</label><input id="callPolicy" placeholder="Sinistro, apólice ou OS externa"></div>
+                <div><label>Nº sinistro</label><input id="callClaim" placeholder="Sinistro"></div>
+                <div><label>Nº apólice</label><input id="callPolicyNumber" placeholder="Apólice"></div>
+                <div><label>Prazo SLA</label><input id="callSlaLimit" type="datetime-local"></div>
+                <div><label>Status cobrança</label><select id="callBillingStatus"><option value="aberto">Aberto</option><option value="a_faturar">A faturar</option><option value="faturado">Faturado</option><option value="recebido">Recebido</option><option value="glosado">Glosado</option></select></div>
+                <div><label>Placa do cliente</label><input id="callCustomerPlate" placeholder="ABC1D23"></div>
+                <div><label>Veículo do cliente</label><input id="callCustomerVehicle" placeholder="Modelo / cor / observação"></div>
+                <div><label>Excedente KM</label><input id="callExtraKm" inputmode="decimal" placeholder="0"></div>
+                <div><label>Veículo da frota</label><select id="callVehicle"></select></div>
                 <div><label>Motorista</label><select id="callDriver"></select></div>
                 <div class="wide geo-block">
                   <label>Origem / local do veículo</label>
                   <input id="callOriginLabel" placeholder="Cole link do Google Maps/Waze ou -20.851076,-49.398946">
                   <div class="geo-actions">
-                    <button class="btn" id="btnGeocodeOrigin" type="button">Ler origem do link/coordenada</button>
+                    <button class="btn" id="btnGeocodeOrigin" type="button">Buscar origem</button>
+                    <button class="btn" id="btnOpenOriginGoogle" type="button">Conferir no Google Maps</button>
                     <button class="btn" id="btnUseCurrentLocation" type="button">Usar localização atual</button>
                   </div>
                   <div id="originGeoStatus" class="small muted geo-status">Aguardando link do mapa ou coordenadas.</div>
@@ -110,24 +217,68 @@
                   <label>Destino</label>
                   <input id="callDestLabel" placeholder="Cole link do destino ou -20.851076,-49.398946">
                   <div class="geo-actions">
-                    <button class="btn" id="btnGeocodeDest" type="button">Ler destino do link/coordenada</button>
+                    <button class="btn" id="btnGeocodeDest" type="button">Buscar destino</button>
+                    <button class="btn" id="btnOpenDestGoogle" type="button">Conferir no Google Maps</button>
                   </div>
                   <div id="destGeoStatus" class="small muted geo-status">Destino opcional; pode ser link compartilhado ou coordenadas.</div>
                 </div>
                 <div><label>Destino lat</label><input id="callDestLat" inputmode="decimal" placeholder="automático"></div>
                 <div><label>Destino lng</label><input id="callDestLng" inputmode="decimal" placeholder="automático"></div>
+                <div class="wide geo-block route-link-block">
+                  <label>Link externo da rota compartilhada</label>
+                  <input id="callRouteExternalUrl" placeholder="Cole o link compartilhado do Google Maps/Waze. Ex: https://maps.app.goo.gl/...">
+                  <div class="geo-actions">
+                    <button class="btn" id="btnReadRouteLink" type="button">Ler/salvar link da rota</button>
+                  </div>
+                  <div id="routeLinkStatus" class="small muted route-link-status">Opcional: usado para abrir a navegação no Maps/Waze. Se o link trouxer coordenadas visíveis, o sistema preenche origem/destino e desenha a rota no mapa interno.</div>
+                </div>
                 <div class="wide route-planner">
                   <div class="actions" style="justify-content:space-between;align-items:center">
                     <div>
                       <b>Rota inteligente</b>
-                      <div class="muted small">Calcula o melhor veículo pela posição real do Tracker + link/coordenadas, sem API paga.</div>
+                      <div class="muted small">Calcula melhor veículo, rota OSRM, pedágios cadastrados e preço sugerido sem API paga obrigatória.</div>
                     </div>
                     <div class="actions">
                       <button class="btn good" id="btnSmartRoute" type="button">Traçar rota inteligente</button>
+                      <button class="btn" id="btnRoutePricingRecalc" type="button">Recalcular rota/preço</button>
                       <button class="btn" id="btnOpenGoogleRoute" type="button">Abrir rota no Maps</button>
                     </div>
                   </div>
-                  <div id="smartRouteBox" class="smart-route-box small muted">Modo gratuito: use link compartilhado do mapa ou coordenadas. O algoritmo usa Tracker RAFA + distância estimada no Leaflet/OpenStreetMap.</div>
+                  <div id="smartRouteBox" class="smart-route-box small muted">Use coordenadas ou link com coordenadas. O algoritmo usa Tracker RAFA e rota por ruas; se falhar, mantém fallback estimado.</div>
+                  <div id="routePricingSummary" class="route-pricing-summary small muted">Preço sugerido e pedágio aparecem aqui após calcular a rota.</div>
+                </div>
+                <div class="wide tow-pricing-card">
+                  <div class="actions" style="justify-content:space-between;align-items:center">
+                    <div>
+                      <b>Precificação do guincho</b>
+                      <div class="muted small">Cálculo editável no chamado: saída + KM, desconto próprio, franquia, ida/volta e pedágios.</div>
+                    </div>
+                    <label class="toggle-line"><input type="checkbox" id="callTowActive"> Cobrar no chamado</label>
+                  </div>
+                  <div class="form-grid compact-grid">
+                    <div class="wide"><label>Tipo de transporte</label><select id="callTowType"><option value="leve">Leve até 1.500 kg / moto / semirreboque até 750 kg</option><option value="pesado">Pesado acima de 1.500 kg / van / coletivo / carga / semirreboque acima de 750 kg</option></select></div>
+                    <div><label>KM rodado na ida</label><input id="callTowKm" inputmode="decimal" placeholder="Ex: 30,00"></div>
+                    <div><label>Franquia inclusa (km)</label><input id="callTowFranchiseKm" inputmode="decimal" value="15"></div>
+                    <div><label>Saída guincho (R$)</label><input id="callTowBaseOut" inputmode="decimal" value="253,22"></div>
+                    <div><label>KM base (R$)</label><input id="callTowKmValue" inputmode="decimal" value="8,51"></div>
+                    <div><label>Desc. guincho (%)</label><input id="callTowDiscountPct" inputmode="decimal" value="0"></div>
+                    <div><label>Pedágio ida (R$)</label><input id="callTowTollOneWay" inputmode="decimal" value="0,00"></div>
+                    <label class="check-card"><input type="checkbox" id="callTowRoundTrip" checked> Cobrar ida e volta</label>
+                    <label class="check-card"><input type="checkbox" id="callTowSubtractFranchise"> Abater franquia de KM</label>
+                    <label class="check-card"><input type="checkbox" id="callTowTollRoundTrip" checked> Cobrar pedágio ida e volta</label>
+                    <div><label>Saída líquida</label><input id="callTowNetOut" readonly value="R$ 0,00"></div>
+                    <div><label>KM líquido</label><input id="callTowNetKm" readonly value="R$ 0,00"></div>
+                    <div><label>Valor por trecho</label><input id="callTowOneWay" readonly value="R$ 0,00"></div>
+                    <div><label>Total pedágios</label><input id="callTowTollTotal" readonly value="R$ 0,00"></div>
+                    <div><label>Total guincho</label><input id="callTowTotal" readonly value="R$ 0,00"></div>
+                    <div class="wide"><label>Observação do deslocamento</label><input id="callTowNotes" placeholder="Ex: remoção ida e volta, excedente KM, apoio externo..."></div>
+                  </div>
+                  <div class="actions tow-actions">
+                    <button class="btn" id="btnTowUseRouteKm" type="button">Usar KM da rota calculada</button>
+                    <button class="btn good" id="btnUseSuggestedPrice" type="button">Usar preço sugerido</button>
+                    <button class="btn good" id="btnTowApplyToPrice" type="button">Aplicar total no valor previsto</button>
+                  </div>
+                  <div id="towPricingStatus" class="small muted">Ao traçar rota inteligente, o sistema sugere KM, pedágio por praças cadastradas e preço. Valor digitado manualmente não é substituído sem clique explícito.</div>
                 </div>
                 <div class="wide"><label>Observações</label><textarea id="callNotes"></textarea></div>
                 <button class="btn primary wide" type="submit">Registrar chamado</button>
@@ -136,7 +287,136 @@
             </div>
             <div class="panel col-7">
               <h2>Chamados em tempo real</h2>
+              <div class="module-toolbar" aria-label="Filtros dos chamados">
+                <input id="callsSearch" placeholder="Buscar protocolo, cliente, placa, rota ou seguradora">
+                <select id="callsStatusFilter" aria-label="Status do chamado">
+                  <option value="">Todos os status</option>
+                  <option value="aguardando_despacho">Aguardando despacho</option>
+                  <option value="despachado">Despachado</option>
+                  <option value="motorista_a_caminho">Motorista a caminho</option>
+                  <option value="motorista_no_local">Motorista no local</option>
+                  <option value="veiculo_carregado">Veículo carregado</option>
+                  <option value="em_transporte">Em transporte</option>
+                </select>
+                <select id="callsSourceFilter" aria-label="Origem comercial">
+                  <option value="">Todas origens</option>
+                  <option value="Seguradora">Seguradora</option>
+                  <option value="Assistência 24h">Assistência 24h</option>
+                  <option value="Particular">Particular</option>
+                  <option value="Empresa parceira">Empresa parceira</option>
+                </select>
+                <button class="btn" id="callsClearFilters" type="button">Limpar</button>
+              </div>
               <div id="callsTable" class="table-wrap"></div>
+            </div>
+            <div class="panel col-12">
+              <h2>Painel do chamado</h2>
+              <div id="callDossierBox" class="call-dossier"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-finalizados" class="view">
+          <div class="grid">
+            <div class="panel col-12">
+              <h2>Chamados finalizados e fechados</h2>
+              <p class="muted small">Chamado finalizado fica travado. Reabertura exige autorização de gestor/gerente e motivo auditado.</p>
+              <div class="module-toolbar" aria-label="Filtros de finalizados">
+                <input id="finalizedSearch" placeholder="Buscar protocolo, cliente, placa, seguradora ou motorista">
+                <select id="finalizedBillingFilter" aria-label="Status de cobrança">
+                  <option value="">Todas cobranças</option>
+                  <option value="aguardando_provas">Aguardando provas</option>
+                  <option value="a_faturar">A faturar</option>
+                  <option value="a_receber">A receber</option>
+                  <option value="fechado_a_receber">Fechado a receber</option>
+                  <option value="recebido">Recebido</option>
+                  <option value="glosado">Glosado</option>
+                </select>
+                <button class="btn" id="finalizedClearFilters" type="button">Limpar</button>
+              </div>
+              <div id="finalizedCallsTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-clientes" class="view">
+          <div class="grid">
+            <div class="panel col-4">
+              <h2>Cadastro de clientes</h2>
+              <form id="customerForm" class="form-grid">
+                <div class="wide"><label>Nome / razão social</label><input id="customerName" required placeholder="Seguradora, assistência, empresa ou cliente"></div>
+                <div><label>Tipo</label><select id="customerType"><option>Particular</option><option>Seguradora</option><option>Assistência 24h</option><option>Empresa parceira</option><option>Pátio</option><option>Órgão público</option></select></div>
+                <div><label>CPF/CNPJ</label><input id="customerDocument" inputmode="numeric" placeholder="CPF ou CNPJ"></div>
+                <div><label>Contato</label><input id="customerContact" placeholder="Nome do responsável"></div>
+                <div><label>WhatsApp</label><input id="customerPhone" inputmode="tel"></div>
+                <div class="wide"><label>E-mail</label><input id="customerEmail" type="email"></div>
+                <div class="wide"><label>Portal / site da seguradora</label><input id="customerPortal" placeholder="https://portal.seguradora.com.br"></div>
+                <div><label>Telefone faturamento</label><input id="customerBillingPhone" inputmode="tel"></div>
+                <div><label>E-mail faturamento</label><input id="customerBillingEmail" type="email" placeholder="notas@seguradora.com.br"></div>
+                <div><label>Prazo de pagamento</label><input id="customerPaymentTerm" placeholder="Ex: 15 dias, 30 dias, quinzenal"></div>
+                <div><label>Risco de glosa</label><select id="customerGlosaRisk"><option value="baixo">Baixo</option><option value="medio">Médio</option><option value="alto">Alto</option></select></div>
+                <div class="wide"><label>Regras de faturamento</label><textarea id="customerBillingRules" placeholder="Checklist, fotos, nota, protocolo, excedente KM, glosa, fechamento..."></textarea></div>
+                <div class="wide"><label>Exigências de provas</label><textarea id="customerProofRules" placeholder="Fotos obrigatórias, assinatura, comprovante, checklist, campos do portal e prazo de envio."></textarea></div>
+                <button class="btn primary wide" type="submit">Salvar cliente</button>
+                <button class="btn wide hidden" id="customerCancelEdit" type="button">Cancelar edição</button>
+              </form>
+            </div>
+            <div class="panel col-8">
+              <h2>Clientes, seguradoras e parceiros</h2>
+              <div id="customersTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-integracoes" class="view">
+          <div class="grid">
+            <div class="panel col-5">
+              <h2>Entrada de acionamentos externos</h2>
+              <p class="muted small">Fila profissional para receber chamados de seguradoras. Em produção, essa fila deve ser alimentada por webhook, e-mail parser ou robô autorizado; sem backend, use este formulário como entrada manual controlada.</p>
+              <form id="integrationForm" class="form-grid">
+                <div><label>Seguradora / origem</label><input id="intSource" required placeholder="Porto, Suhai, Allianz..."></div>
+                <div><label>Tipo de entrada</label><select id="intSourceType"><option value="manual">Manual</option><option value="webhook">Webhook/API</option><option value="email_parser">E-mail parser</option><option value="portal_robot">Robô autorizado</option><option value="whatsapp">WhatsApp</option></select></div>
+                <div><label>Protocolo externo</label><input id="intProtocol" placeholder="Acionamento / OS"></div>
+                <div><label>ID externo</label><input id="intExternalId" placeholder="ID do portal/API/e-mail"></div>
+                <div><label>Cliente final</label><input id="intCustomer" placeholder="Nome do cliente"></div>
+                <div><label>WhatsApp cliente</label><input id="intPhone" inputmode="tel"></div>
+                <div><label>Sinistro</label><input id="intClaim" placeholder="Nº sinistro"></div>
+                <div><label>Apólice</label><input id="intPolicy" placeholder="Nº apólice"></div>
+                <div><label>Placa</label><input id="intPlate" placeholder="ABC1D23"></div>
+                <div><label>Prazo SLA</label><input id="intSla" type="datetime-local"></div>
+                <div class="wide"><label>Origem informada</label><input id="intOrigin" placeholder="Endereço, coordenada ou link enviado pela seguradora"></div>
+                <div class="wide"><label>Destino informado</label><input id="intDestination" placeholder="Endereço, coordenada ou link enviado pela seguradora"></div>
+                <div class="wide"><label>Texto bruto do portal/e-mail/WhatsApp</label><textarea id="intPayload" placeholder="Cole aqui o chamado recebido da seguradora para não perder informação operacional."></textarea></div>
+                <button class="btn primary wide" type="submit">Adicionar à fila</button>
+              </form>
+            </div>
+            <div class="panel col-7">
+              <h2>Fila de integrações</h2>
+              <div id="integrationInboxTable" class="table-wrap"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-assistente" class="view">
+          <div class="grid">
+            <div class="panel col-5 ai-panel">
+              <h2>Assistente IA</h2>
+              <p class="muted small">Cole textos de portais como Maxpar, Amparo, Veniti ou seguradoras. A IA monta um chamado oficial com protocolo, beneficiário, veículo, origem, destino, perguntas, tarifas e valor. Revise antes de salvar.</p>
+              <div class="ai-upload-box">
+                <input id="aiSourceFile" type="file" accept="image/*,.pdf">
+                <div id="aiFilePreview" class="ai-file-preview muted small">Nenhum arquivo selecionado.</div>
+              </div>
+              <textarea id="aiSourceText" class="ai-textarea" placeholder="Cole aqui o acionamento completo da seguradora, inclusive perguntas, origem, destino, tarifas, links e observações."></textarea>
+              <div class="actions">
+                <button class="btn" id="btnAiExtract" type="button">Ler print</button>
+                <button class="btn primary" id="btnAiAnalyze" type="button">Gerar rascunhos</button>
+                <button class="btn" id="btnAiClear" type="button">Limpar</button>
+              </div>
+              <div id="aiStatus" class="small muted">O salvamento só acontece depois da revisão.</div>
+            </div>
+            <div class="panel col-7 ai-panel">
+              <h2>Revisão antes de salvar</h2>
+              <div id="aiReviewBox" class="ai-review-box"><p class="muted">Nenhum rascunho gerado ainda.</p></div>
             </div>
           </div>
         </section>
@@ -145,8 +425,16 @@
           <div class="grid">
             <div class="panel col-12">
               <h2>Rastreamento e rotas</h2>
-              <p class="muted small">Mapa gratuito Leaflet/OpenStreetMap. O sistema usa o Tracker RAFA para posicionar a frota e calcular o veículo mais próximo.</p>
-              <div class="actions" style="margin-bottom:10px"><button class="btn primary" id="btnSyncTrackerNow" type="button">Atualizar Tracker agora</button><a class="btn" target="_blank" href="https://gps2.rafacarrastreadores.com.br">Abrir plataforma RAFA</a></div>
+              <p class="muted small">Mapa com visual Google Road ou Híbrido, posições normalizadas dos rastreadores cadastrados, RAFA preservado e GPS celular como fallback quando habilitado.</p>
+              <div class="actions" style="margin-bottom:10px">
+                <label class="map-layer-control">Mapa
+                  <select class="mapProviderSelect" aria-label="Tipo de mapa da frota">
+                    <option value="google_road">Google Road</option>
+                    <option value="google_hybrid">Google Híbrido</option>
+                  </select>
+                </label>
+                <button class="btn primary" id="btnSyncTrackerNow" type="button">Atualizar rastreadores agora</button><a class="btn" target="_blank" rel="noopener noreferrer" href="https://gps2.rafacarrastreadores.com.br">Abrir plataforma RAFA</a>
+              </div>
               <div id="fleetMap" class="map"></div>
             </div>
             <div class="panel col-12">
@@ -158,56 +446,105 @@
 
         <section id="view-financeiro" class="view">
           <div class="grid">
-            <div class="card kpi col-3"><span>Receita no período</span><strong id="finKpiRevenue">R$ 0,00</strong></div>
-            <div class="card kpi col-3"><span>Despesas no período</span><strong id="finKpiCosts">R$ 0,00</strong></div>
-            <div class="card kpi col-3"><span>Lucro bruto</span><strong id="finKpiProfit">R$ 0,00</strong></div>
-            <div class="card kpi col-3"><span>Margem</span><strong id="finKpiMargin">0%</strong></div>
-
-            <div class="panel col-4">
-              <h2>Lançamento financeiro profissional</h2>
+            <div class="panel col-12 finance-entry-panel">
+              <h2>Lançamento financeiro</h2>
               <form id="financeForm" class="form-grid">
-                <div><label>Tipo</label><select id="finType"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="transferencia">Transferência</option><option value="ajuste">Ajuste</option></select></div>
-                <div><label>Status</label><select id="finStatus"><option>Recebido</option><option>A receber</option><option>Pago</option><option>Pendente</option><option>Cancelado</option></select></div>
-                <div><label>Competência</label><input id="finDate" type="date"></div>
-                <div><label>Vencimento</label><input id="finDueDate" type="date"></div>
-                <div><label>Pagamento</label><input id="finPaidDate" type="date"></div>
-                <div><label>Categoria</label><select id="finCategory"><option>Receita de chamado</option><option>Receita particular</option><option>Receita seguradora</option><option>Receita empresa parceira</option><option>Combustível</option><option>Pedágio</option><option>Manutenção</option><option>Pneu</option><option>Óleo</option><option>Documento</option><option>Seguro</option><option>Lavagem</option><option>Peças</option><option>Mão de obra</option><option>Diária motorista</option><option>Comissão motorista</option><option>Alimentação</option><option>Estacionamento</option><option>Multa</option><option>Imposto</option><option>Despesa administrativa</option><option>Telefone/internet</option><option>Marketing</option><option>Outros</option></select></div>
-                <div><label>Centro de custo</label><select id="finCostCenter"><option>Operacional</option><option>Frota</option><option>Motoristas</option><option>Administrativo</option><option>Comercial</option><option>Impostos</option><option>Outros</option></select></div>
+                <div><label>Tipo</label><select id="finType"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
+                <div><label>Data</label><input id="finDate" type="date"></div>
+                <div class="wide"><label>Descrição</label><input id="finDesc" required></div>
+                <div><label>Valor</label><input id="finAmount" inputmode="decimal" required></div>
+                <div><label>Status</label><select id="finStatus"><option>Recebido</option><option>A receber</option><option>Pago</option><option>Pendente</option></select></div>
+                <div><label>Categoria</label><input id="finCategory" placeholder="Combustível, seguradora, manutenção..."></div>
+                <div><label>Cliente/seguradora</label><select id="finCustomer"></select></div>
+                <div><label>Chamado</label><select id="finCall"></select></div>
                 <div><label>Veículo</label><select id="finVehicle"></select></div>
                 <div><label>Motorista</label><select id="finDriver"></select></div>
-                <div class="wide"><label>Chamado vinculado</label><select id="finCall"></select></div>
-                <div class="wide"><label>Cliente / fornecedor</label><input id="finParty" placeholder="Cliente, seguradora, fornecedor ou oficina"></div>
-                <div><label>Valor bruto</label><input id="finAmount" inputmode="decimal" required></div>
-                <div><label>Desconto</label><input id="finDiscount" inputmode="decimal" placeholder="0,00"></div>
-                <div><label>Acréscimo</label><input id="finExtra" inputmode="decimal" placeholder="0,00"></div>
-                <div><label>Forma pgto.</label><select id="finPaymentMethod"><option>Pix</option><option>Dinheiro</option><option>Cartão crédito</option><option>Cartão débito</option><option>Boleto</option><option>Transferência</option><option>Cheque</option><option>Outros</option></select></div>
-                <div class="wide"><label>Descrição</label><input id="finDesc" required></div>
-                <div class="wide"><label>Observação interna</label><textarea id="finNotes"></textarea></div>
                 <button class="btn primary wide" type="submit">Salvar financeiro</button>
-                <button class="btn wide hidden" id="finCancelEdit" type="button">Cancelar edição</button>
+                <button class="btn wide hidden" id="financeCancelEdit" type="button">Cancelar edição</button>
               </form>
             </div>
-            <div class="panel col-8">
-              <div class="actions" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div>
-                  <h2 style="margin:0">Financeiro, DRE e auditoria</h2>
-                  <div class="muted small">Gestor e financeiro podem editar/excluir lançamentos; toda exclusão grava rastro em auditLogs.</div>
-                </div>
-                <button class="btn" id="btnExportFinanceCsv" type="button">Exportar CSV</button>
-              </div>
-              <div class="form-grid compact-filters">
-                <div><label>De</label><input id="finFilterFrom" type="date"></div>
-                <div><label>Até</label><input id="finFilterTo" type="date"></div>
-                <div><label>Veículo</label><select id="finFilterVehicle"></select></div>
-                <div><label>Motorista</label><select id="finFilterDriver"></select></div>
-                <div><label>Tipo</label><select id="finFilterType"><option value="">Todos</option><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="transferencia">Transferência</option><option value="ajuste">Ajuste</option></select></div>
-                <div><label>Status</label><select id="finFilterStatus"><option value="">Todos</option><option>Recebido</option><option>A receber</option><option>Pago</option><option>Pendente</option><option>Cancelado</option></select></div>
+            <div class="panel col-12 finance-results-panel">
+              <h2>Financeiro e despesas</h2>
+              <div class="finance-toolbar" aria-label="Filtros do financeiro">
+                <input id="financeSearch" placeholder="Buscar por cliente, descrição, placa, protocolo ou motorista">
+                <select id="financeTypeFilter" aria-label="Tipo financeiro">
+                  <option value="">Todos os tipos</option>
+                  <option value="entrada">Entradas</option>
+                  <option value="saida">Saídas</option>
+                </select>
+                <select id="financeStatusFilter" aria-label="Status financeiro">
+                  <option value="">Todos os status</option>
+                  <option value="recebido">Recebido</option>
+                  <option value="a receber">A receber</option>
+                  <option value="a faturar">A faturar</option>
+                  <option value="pago">Pago</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="glosado">Glosado</option>
+                </select>
+                <input id="financeStartDate" type="date" aria-label="Data inicial">
+                <input id="financeEndDate" type="date" aria-label="Data final">
+                <button class="btn" id="financeClearFilters" type="button">Limpar filtros</button>
               </div>
               <div id="financeTable" class="table-wrap"></div>
               <h2 style="margin-top:18px">Despesas de motorista para aprovar</h2>
               <div id="expenseApproval" class="table-wrap"></div>
-              <h2 style="margin-top:18px">KPIs por veículo e motorista</h2>
-              <div id="financeKpiTables" class="grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-pagamentos" class="view">
+          <div class="grid">
+            <div class="panel col-12 finance-entry-panel">
+              <h2>Pagamentos de clientes e seguradoras</h2>
+              <form id="paymentForm" class="form-grid">
+                <div><label>Tipo</label><select id="payType"><option value="entrada">Receber</option><option value="saida">Pagar</option></select></div>
+                <div><label>Data</label><input id="payDate" type="date"></div>
+                <div><label>Vencimento</label><input id="payDueDate" type="date"></div>
+                <div><label>Status</label><select id="payStatus"><option>A receber</option><option>Recebido</option><option>Pendente</option><option>Pago</option><option>A faturar</option><option>Glosado</option></select></div>
+                <div class="wide"><label>Cliente cadastrado</label><select id="payCustomer"></select></div>
+                <div class="wide"><label>Nome avulso pagador/recebedor</label><input id="payBillingParty" placeholder="Use se não estiver no cadastro de clientes"></div>
+                <div><label>Chamado</label><select id="payCall"></select></div>
+                <div><label>Forma</label><select id="payMethod"><option>PIX</option><option>Boleto</option><option>Cartão</option><option>Dinheiro</option><option>Transferência</option><option>Faturamento seguradora</option></select></div>
+                <div class="wide"><label>Descrição</label><input id="payDescription" placeholder="Ex: Faturamento mensal Suhai, chamado JM-..."></div>
+                <div><label>Nota / fatura</label><input id="payInvoice" placeholder="NF, fatura, borderô"></div>
+                <div><label>Categoria</label><input id="payCategory" placeholder="Seguradora, particular, manutenção..."></div>
+                <div><label>Valor</label><input id="payAmount" inputmode="decimal" required></div>
+                <button class="btn primary wide" type="submit">Salvar pagamento</button>
+                <button class="btn wide hidden" id="paymentCancelEdit" type="button">Cancelar edição</button>
+              </form>
+            </div>
+            <div class="panel col-12 finance-results-panel">
+              <h2>Contas a receber e a pagar</h2>
+              <div class="module-toolbar" aria-label="Filtros de pagamentos">
+                <input id="paymentSearch" placeholder="Buscar seguradora, documento, descrição ou chamado">
+                <select id="paymentTypeFilter" aria-label="Tipo de pagamento">
+                  <option value="">Todos</option>
+                  <option value="entrada">A receber</option>
+                  <option value="saida">A pagar</option>
+                </select>
+                <select id="paymentStatusFilter" aria-label="Status de pagamento">
+                  <option value="">Todos os status</option>
+                  <option value="a receber">A receber</option>
+                  <option value="recebido">Recebido</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="pago">Pago</option>
+                  <option value="glosado">Glosado</option>
+                </select>
+                <button class="btn" id="paymentClearFilters" type="button">Limpar</button>
+              </div>
+              <div id="paymentsSummary"></div>
+              <div id="paymentsTable" class="table-wrap"></div>
+            </div>
+            <div class="panel col-12 insurance-closing-panel">
+              <h2>Fechamento seguradoras</h2>
+              <div class="module-toolbar" aria-label="Filtros de fechamento">
+                <input id="closingSearch" placeholder="Buscar seguradora, protocolo, placa ou cliente">
+                <input id="closingMonthFilter" type="month" aria-label="Mês do fechamento">
+                <button class="btn" id="closingClearFilters" type="button">Limpar</button>
+              </div>
+              <div id="insuranceClosingSummary"></div>
+              <div id="insuranceClosingTable" class="table-wrap"></div>
+              <div id="insuranceClosingReview" class="closing-review"></div>
             </div>
           </div>
         </section>
@@ -219,34 +556,38 @@
               <form id="vehicleForm" class="form-grid">
                 <div><label>Placa</label><input id="vehiclePlate" maxlength="8" required></div>
                 <div><label>Apelido</label><input id="vehicleAlias"></div>
-                <div><label>Tipo</label><input id="vehicleType" placeholder="Plataforma, Munck, utilitário..."></div>
+                <div><label>Tipo</label><input id="vehicleType"></div>
+                <div><label>Provedor de GPS</label><select id="vehicleTrackerProvider"><option value="">RAFA/automático</option></select></div>
+                <div><label>Tracker ID / deviceId</label><input id="vehicleTrackerId" placeholder="81 ou uniqueId"></div>
+                <div><label>External ID</label><input id="vehicleTrackerExternalId" placeholder="ID externo no provedor"></div>
+                <div><label>IMEI</label><input id="vehicleTrackerImei" inputmode="numeric" placeholder="IMEI do rastreador"></div>
+                <div><label>Placa no provedor</label><input id="vehicleTrackerPlate" placeholder="ABC1D23"></div>
+                <div><label>Rastreamento ativo</label><select id="vehicleTrackerEnabled"><option value="true">Sim</option><option value="false">Não</option></select></div>
                 <div><label>Status</label><select id="vehicleStatus"><option>Disponível</option><option>Em atendimento</option><option>Manutenção</option><option>Indisponível</option></select></div>
-                <div><label>KM atual</label><input id="vehicleKm" inputmode="numeric" placeholder="opcional"></div>
-                <div><label>Custo fixo mensal</label><input id="vehicleFixedCost" inputmode="decimal" placeholder="0,00"></div>
                 <button class="btn primary wide" type="submit">Salvar veículo</button>
-              </form>
-
-              <h2 style="margin-top:18px">Manutenção / custo de frota</h2>
-              <form id="maintenanceForm" class="form-grid">
-                <div class="wide"><label>Veículo</label><select id="maintVehicle" required></select></div>
-                <div><label>Tipo</label><select id="maintType"><option>Preventiva</option><option>Corretiva</option><option>Pneu</option><option>Óleo</option><option>Freio</option><option>Suspensão</option><option>Elétrica</option><option>Guincho/plataforma</option><option>Munck</option><option>Documentação</option><option>Seguro</option><option>Outros</option></select></div>
-                <div><label>Data</label><input id="maintDate" type="date"></div>
-                <div><label>KM</label><input id="maintKm" inputmode="numeric"></div>
-                <div><label>Valor</label><input id="maintAmount" inputmode="decimal" required></div>
-                <div><label>Status</label><select id="maintStatus"><option>Realizada</option><option>Agendada</option><option>Pendente</option><option>Cancelada</option></select></div>
-                <div class="wide"><label>Fornecedor/oficina</label><input id="maintSupplier"></div>
-                <div class="wide"><label>Próxima revisão</label><input id="maintNext" placeholder="Ex: 10.000 km ou 20/06/2026"></div>
-                <div class="wide"><label>Observação</label><textarea id="maintNotes"></textarea></div>
-                <button class="btn good wide" type="submit">Salvar manutenção e lançar custo</button>
-                <button class="btn wide hidden" id="maintCancelEdit" type="button">Cancelar edição</button>
               </form>
             </div>
             <div class="panel col-8">
-              <h2>Frota JM — custo, manutenção e lucratividade</h2>
-              <div id="fleetKpiBox" class="grid"></div>
+              <h2>Frota JM</h2>
               <div id="fleetTable" class="table-wrap"></div>
-              <h2 style="margin-top:18px">Histórico de manutenções</h2>
+            </div>
+            <div class="panel col-4">
+              <h2>Manutenção</h2>
+              <form id="maintenanceForm" class="form-grid">
+                <div class="wide"><label>Veículo</label><select id="maintenanceVehicle"></select></div>
+                <div><label>Data</label><input id="maintenanceDate" type="date"></div>
+                <div><label>Status</label><select id="maintenanceStatus"><option value="aberta">Aberta</option><option value="agendada">Agendada</option><option value="concluida">Concluída</option></select></div>
+                <div class="wide"><label>Serviço</label><input id="maintenanceDesc" placeholder="Troca de óleo, pneu, revisão..."></div>
+                <div><label>KM</label><input id="maintenanceKm" inputmode="numeric" placeholder="123000"></div>
+                <div><label>Custo</label><input id="maintenanceCost" inputmode="decimal" placeholder="0,00"></div>
+                <button class="btn primary wide" type="submit">Salvar manutenção</button>
+                <button class="btn wide hidden" id="maintenanceCancelEdit" type="button">Cancelar edição</button>
+              </form>
+            </div>
+            <div class="panel col-8">
+              <h2>Histórico de manutenção</h2>
               <div id="maintenanceTable" class="table-wrap"></div>
+              <div id="vehicleCostsTable" class="table-wrap"></div>
             </div>
           </div>
         </section>
@@ -259,7 +600,7 @@
                 <div class="wide"><label>Nome</label><input id="teamName" required></div>
                 <div class="wide"><label>E-mail</label><input id="teamEmail" type="email" required></div>
                 <div><label>Senha inicial</label><input id="teamPass" type="password" autocomplete="new-password" placeholder="mínimo 6 caracteres"></div>
-                <div><label>Perfil</label><select id="teamRole"><option value="driver">Motorista</option><option value="auxiliar">Auxiliar</option><option value="atendente">Atendente</option><option value="gerente">Gerente</option><option value="finance">Financeiro</option><option value="admin">Gestor/Admin</option><option value="owner">Dono/Gestor master</option></select></div>
+                <div><label>Perfil</label><select id="teamRole"><option value="driver">Motorista</option><option value="atendente">Atendente</option><option value="gerente">Gerente</option><option value="admin">Gestor/Admin</option><option value="finance">Financeiro</option></select></div>
                 <div><label>Ativo</label><select id="teamActive"><option value="true">Sim</option><option value="false">Não</option></select></div>
                 <button class="btn primary wide" type="submit">Criar/atualizar equipe</button>
                 <button class="btn wide hidden" id="teamCancelEdit" type="button">Cancelar edição</button>
@@ -275,18 +616,20 @@
     </main>
   </section>
 
-  <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
+  <footer class="signature-footer" aria-hidden="true"></footer>
   <div id="toast" class="toast"></div>
 
-  <script src="js/config.firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/config.firebase.js?v=jm-v28-5-firestore-callsize-motorista"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="js/utils.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/tracker.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/google-maps.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/mapa.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/app.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+  <script src="js/utils.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/firebase.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/tracker.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/google-maps.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/mapa.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/toll-plazas.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/app.js?v=jm-v28-5-firestore-callsize-motorista"></script>
 </body>
 </html>

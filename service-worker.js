@@ -1,10 +1,13 @@
-const CACHE_NAME = "jm-guinchos-v13-financeiro-frota-kpi";
+const CACHE_NAME = "jm-v28-5-firestore-callsize-motorista";
 const ASSETS = [
   "./",
   "./index.html",
   "./jm.html",
+  "./formulario.html",
   "./motorista.html",
   "./superadmin.html",
+  "./cliente-chamado.html",
+  "./relatorio.html",
   "./manifest.json",
   "./css/style.css",
   "./js/config.firebase.js",
@@ -13,6 +16,7 @@ const ASSETS = [
   "./js/tracker.js",
   "./js/google-maps.js",
   "./js/mapa.js",
+  "./js/toll-plazas.js",
   "./js/app.js",
   "./js/motorista.js",
   "./js/superadmin.js",
@@ -23,7 +27,6 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => null));
 });
-
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()

@@ -1,8 +1,8 @@
 /*
- * JM Guinchos - configuracao central
+ * JM Guinchos - configuração central
  * Frontend estatico: qualquer dado neste arquivo fica visivel no GitHub Pages.
- * Para operacao profissional, nao publique token de rastreador neste arquivo.
- * Cadastre o token no superadmin.html e troque-o sempre que houver exposicao.
+ * Para operação profissional, não publique token de rastreador neste arquivo.
+ * Cadastre o token no superadmin.html e troque-o sempre que houver exposição.
  */
 window.JM_CONFIG = {
   firebaseConfig: {
@@ -11,7 +11,8 @@ window.JM_CONFIG = {
     projectId: "frvalencio",
     storageBucket: "frvalencio.firebasestorage.app",
     messagingSenderId: "1008400858370",
-    appId: "1:1008400858370:web:17019357ea499ecd87561b"
+    appId: "1:1008400858370:web:17019357ea499ecd87561b",
+    databaseURL: ""
   },
   empresa: {
     nome: "JM Guinchos",
@@ -21,11 +22,12 @@ window.JM_CONFIG = {
   },
   auth: {
     adminEmails: [
-      "jm@jm.com",
-      "tsvalencio@gmail.com"
+      "jm@jm.com.br",
+      "jm@jm.com"
     ],
     superadminEmails: [
-      "tsvalencio@gmail.com"
+      "jm@jm.com.br",
+      "jm@jm.com"
     ],
     autoRepairGestorLogin: true
   },
@@ -54,8 +56,8 @@ window.JM_CONFIG = {
       },
       DAJ6J95: {
         placa: "DAJ6J95",
-        apelido: "Munk",
-        tipo: "Caminhao munck",
+        apelido: "Munck",
+        tipo: "Caminhão munck",
         trackerId: "DAJ6J95"
       }
     }
@@ -64,5 +66,13 @@ window.JM_CONFIG = {
     cloudName: "",
     uploadPreset: "",
     folder: "jm-guinchos"
+  },
+  mobileGps: {
+    enabled: false,
+    backend: "firestore",
+    databaseURL: "",
+    pollingMs: 10000,
+    minIntervalMs: 20000,
+    minDistanceMeters: 25
   }
 };

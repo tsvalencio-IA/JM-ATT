@@ -1,0 +1,36 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "mobileGps": {
+      ".read": "auth != null",
+      "vehicles": {
+        "$vehicleId": {
+          ".write": "auth != null && ((newData.hasChildren(['lat','lng','driverId','vehicleId','updatedAt']) && newData.child('driverId').val() == auth.uid && newData.child('vehicleId').val() == $vehicleId) || (data.exists() && newData.child('driverId').val() == auth.uid && newData.child('vehicleId').val() == $vehicleId && newData.hasChild('active')))",
+          ".validate": "newData.hasChild('active') || (newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('lat').val() >= -90 && newData.child('lat').val() <= 90 && newData.child('lng').val() >= -180 && newData.child('lng').val() <= 180 && newData.child('driverId').isString() && newData.child('vehicleId').isString() && (newData.child('updatedAt').isString() || newData.child('updatedAt').isNumber()))",
+          "active": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      },
+      "calls": {
+        "$callId": {
+          ".write": "auth != null && ((newData.hasChildren(['lat','lng','driverId','callId','updatedAt']) && newData.child('driverId').val() == auth.uid && newData.child('callId').val() == $callId) || (data.exists() && newData.child('driverId').val() == auth.uid && newData.child('callId').val() == $callId && newData.hasChild('active')))",
+          ".validate": "newData.hasChild('active') || (newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('lat').val() >= -90 && newData.child('lat').val() <= 90 && newData.child('lng').val() >= -180 && newData.child('lng').val() <= 180 && newData.child('driverId').isString() && newData.child('callId').isString() && (newData.child('updatedAt').isString() || newData.child('updatedAt').isNumber()))",
+          "active": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      },
+      "drivers": {
+        "$driverId": {
+          ".write": "auth != null && auth.uid == $driverId",
+          ".validate": "newData.hasChild('active') || (newData.hasChildren(['lat','lng','driverId','updatedAt']) && newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('lat').val() >= -90 && newData.child('lat').val() <= 90 && newData.child('lng').val() >= -180 && newData.child('lng').val() <= 180 && newData.child('driverId').val() == auth.uid && (newData.child('updatedAt').isString() || newData.child('updatedAt').isNumber()))",
+          "active": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      }
+    }
+  }
+}

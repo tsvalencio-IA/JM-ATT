@@ -2,9 +2,10 @@
   "name": "jm-guinchos",
   "version": "1.0.0",
   "private": true,
-  "description": "PWA/APK de gestao operacional para JM Guinchos.",
+  "description": "PWA/APK de gestão operacional para JM Guinchos.",
   "scripts": {
-    "serve": "npx http-server . -p 4177 -c-1",
+    "start": "node server.js",
+    "serve": "node server.js",
     "cap:init": "npx cap init \"JM Guinchos\" br.com.thiaguinho.jmguinchos --web-dir .",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync android",

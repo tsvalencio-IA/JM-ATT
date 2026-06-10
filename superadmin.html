@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07111f">
   <title>JM Guinchos - Superadmin</title>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=jm-financeiro-frota-kpi-v13">
+  <link rel="stylesheet" href="css/style.css?v=jm-v28-5-firestore-callsize-motorista">
 </head>
 <body>
   <section id="superLoginView" class="login">
@@ -85,15 +85,43 @@
             <div><label>DAJ6J95 deviceId/uniqueId</label><input id="trackerDaj" placeholder="ex.: 81 ou 869412076870093"></div>
             <button class="btn primary wide" type="submit">Salvar IDs</button>
           </form>
+        </section>
+        <section class="panel col-12">
+          <h2>Integrações de rastreamento</h2>
+          <p class="muted small">Cadastre mais de um provedor de GPS sem quebrar o RAFA atual. Trackar, Traccar e API customizada só devem ser ativados com endpoint, token e resposta real validados.</p>
+          <form id="trackerProviderForm" class="form-grid">
+            <input id="trackerProviderEditId" type="hidden">
+            <div><label>Nome do provedor</label><input id="trackerProviderName" placeholder="RAFA Rastreamento"></div>
+            <div><label>Tipo</label><select id="trackerProviderType"><option value="rafa">RAFA</option><option value="trackar">Trackar/Tracker</option><option value="traccar">Traccar</option><option value="custom_api">API customizada</option><option value="manual">Manual</option><option value="mobile_gps">GPS celular</option></select></div>
+            <div><label>Ativo</label><select id="trackerProviderActive"><option value="true">Sim</option><option value="false">Não</option></select></div>
+            <div><label>Prioridade</label><input id="trackerProviderPriority" inputmode="numeric" placeholder="1"></div>
+            <div class="wide"><label>Endpoint API</label><input id="trackerProviderEndpoint" placeholder="https://.../api"></div>
+            <div class="wide"><label>Socket URL</label><input id="trackerProviderSocket" placeholder="wss://.../socket"></div>
+            <div><label>Header do token</label><input id="trackerProviderHeader" placeholder="Authorization"></div>
+            <div><label>Prefixo</label><input id="trackerProviderPrefix" placeholder="Bearer "></div>
+            <div class="wide"><label>Token / API key</label><input id="trackerProviderToken" type="password"></div>
+            <div><label>Polling ms</label><input id="trackerProviderPolling" inputmode="numeric" placeholder="30000"></div>
+            <div><label>Timeout ms</label><input id="trackerProviderTimeout" inputmode="numeric" placeholder="15000"></div>
+            <div class="wide"><label>Observações</label><textarea id="trackerProviderNotes" placeholder="Ex.: aguardando documentação de API, CORS, campos de placa/deviceId..."></textarea></div>
+            <button class="btn primary" type="submit">Salvar rastreador</button>
+            <button class="btn" id="trackerProviderTestBtn" type="button">Testar conexão</button>
+            <button class="btn hidden" id="trackerProviderCancelEdit" type="button">Cancelar edição</button>
+          </form>
+          <div id="trackerProviderTestResult" class="muted small" style="margin-top:10px"></div>
+          <div id="trackerProvidersList" class="grid" style="margin-top:12px"></div>
+        </section>
+        <section class="panel col-6">
           <h2 style="margin-top:18px">Cloudinary</h2>
           <form id="superCloudForm" class="form-grid">
             <div><label>Cloud name</label><input id="superCloudName"></div>
             <div><label>Upload preset</label><input id="superCloudPreset"></div>
             <button class="btn primary wide" type="submit">Salvar Cloudinary</button>
           </form>
+        </section>
+        <section class="panel col-6">
           <h2 style="margin-top:18px">Mapa gratuito / Rotas inteligentes</h2>
           <form id="superGoogleMapsForm" class="form-grid">
-            <div class="wide"><p class="muted small">Sem API paga: o jm.html usa Leaflet/OpenStreetMap, links compartilhados do Google Maps/Waze e coordenadas. A rota aberta no Maps é link externo gratuito.</p><input id="superGoogleMapsKey" type="hidden"></div>
+            <div class="wide"><p class="muted small">O mapa operacional usa visual Google Road/Híbrido e rotas por ruas quando disponíveis. Se quiser geocodificação avançada do Google, informe uma chave com Places/Geocoding/Directions habilitados.</p></div><div class="wide"><label>Google Maps API Key opcional</label><input id="superGoogleMapsKey" type="password" placeholder="AIzaSy..."></div>
             <div><label>Idioma</label><input id="superGoogleMapsLanguage" placeholder="pt-BR"></div>
             <div><label>Região</label><input id="superGoogleMapsRegion" placeholder="BR"></div>
             <div><label>Centro latitude</label><input id="superGoogleMapsCenterLat" inputmode="decimal" placeholder="-20.8113"></div>
@@ -102,20 +130,34 @@
             <button class="btn primary wide" type="submit">Salvar mapa gratuito</button>
           </form>
         </section>
+        <section class="panel col-12">
+          <h2 style="margin-top:18px">Módulo GPS por celular</h2>
+          <form id="superMobileGpsForm" class="form-grid">
+            <div><label>Ativar localização por celular</label><select id="superMobileGpsEnabled"><option value="false">Não</option><option value="true">Sim</option></select></div>
+            <div><label>Banco do GPS do celular</label><select id="superMobileGpsBackend"><option value="realtime_database">Realtime Database recomendado</option><option value="firestore">Firestore legado</option></select></div>
+            <div class="wide"><label>Realtime Database URL</label><input id="superMobileGpsDatabaseURL" placeholder="https://SEU-PROJETO-default-rtdb.firebaseio.com"></div>
+            <div><label>Atualização da central (ms)</label><input id="superMobileGpsPolling" inputmode="numeric" placeholder="10000"></div>
+            <div><label>Intervalo mínimo do motorista (ms)</label><input id="superMobileGpsMinInterval" inputmode="numeric" placeholder="20000"></div>
+            <div><label>Distância mínima (metros)</label><input id="superMobileGpsMinDistance" inputmode="numeric" placeholder="25"></div>
+            <div class="wide"><p class="muted small">Se este módulo ficar desativado, nada de GPS por celular aparece nos painéis. O sistema continua usando apenas o Tracker RAFA.</p></div>
+            <button class="btn primary wide" type="submit">Salvar módulo GPS celular</button>
+          </form>
+        </section>
       </div>
     </main>
   </section>
 
-  <footer class="signature-footer">Powered by thIAguinho Soluções Digitais</footer>
+  <footer class="signature-footer" aria-hidden="true"></footer>
   <div id="toast" class="toast"></div>
 
-  <script src="js/config.firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="js/config.firebase.js?v=jm-v28-5-firestore-callsize-motorista"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="js/utils.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/firebase.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/tracker.js?v=jm-financeiro-frota-kpi-v13"></script>
-  <script src="js/superadmin.js?v=jm-financeiro-frota-kpi-v13"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+  <script src="js/utils.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/firebase.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/tracker.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="js/superadmin.js?v=jm-v28-5-firestore-callsize-motorista"></script>
 </body>
 </html>

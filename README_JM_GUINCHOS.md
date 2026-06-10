@@ -1,60 +1,37 @@
-# JM Guinchos — v13 Financeiro, Frota e KPI Profissional
+# JM Guinchos - auditoria profissional
 
-Versão: `jm-financeiro-frota-kpi-v13`
+PWA operacional para guinchos e seguradoras, com central de despacho, mapa, rastreamento, painel do motorista, financeiro, equipe, frota, clientes, integrações e pagamentos.
 
-## O que esta versão evoluiu
+## Acesso inicial
 
-- Financeiro profissional com entrada, saída, transferência e ajuste.
-- Edição e exclusão de lançamentos financeiros pelo gestor/dono.
-- Exclusões críticas gravam auditoria em `auditLogs`.
-- Controle de categoria, centro de custo, veículo, motorista, chamado, vencimento, pagamento e forma de pagamento.
-- KPIs de receita, despesa, lucro bruto e margem.
-- KPIs por veículo e por motorista.
-- Exportação CSV do financeiro.
-- Controle de manutenção da frota com geração automática de custo financeiro.
-- Lucratividade por veículo dentro da tela Frota.
-- DRE rápido por chamado.
-- Cancelamento de chamado com motivo e auditoria.
-- Exclusão definitiva de chamado somente para gestor/dono.
-- Motorista mantém painel separado e visualiza KPIs próprios, sem ver lucro total da empresa.
-- Mantido mapa gratuito Leaflet/OpenStreetMap e Tracker RAFA.
-- Mantido fluxo de login corrigido.
+- Painel principal: `jm.html`
+- Motorista: `motorista.html`
+- Superadmin: `superadmin.html`
+- E-mail inicial liberado: `jm@jm.com.br`
 
-## Arquivos principais alterados
+Após o primeiro acesso, cadastre os usuários reais em Equipe/Superadmin e remova contas provisórias que não serão usadas em produção.
 
-- `jm.html`
-- `motorista.html`
-- `js/app.js`
-- `js/motorista.js`
-- `js/superadmin.js`
-- `firestore.rules`
-- `service-worker.js`
-- `README_JM_GUINCHOS.md`
+## Segurança
 
-## Regras Firestore
+- O token do rastreador não deve ficar no Git. Cadastre endpoint/token pelo Superadmin.
+- O documento público `settings/publicIntegrations` expõe somente configurações necessárias ao app do motorista.
+- Regras do Firestore ficam em `firestore.rules` e devem ser publicadas no Firebase antes da operação real.
+- Links externos usam proteção contra `window.opener` sempre que possível.
+- Exclusões operacionais usam auditoria em `auditLogs`.
 
-Publique o arquivo `firestore.rules` no Firebase Console. Subir o arquivo no GitHub não atualiza as regras do Firestore automaticamente.
+## Publicação local ou Railway
 
-## Perfis e poderes
+```bash
+npm start
+```
 
-- Gestor/Admin: controla chamados, financeiro, frota, equipe, exclusões e auditoria.
-- Financeiro: lança/edita financeiro e aprova despesas, sem excluir usuários/tracker.
-- Gerente: opera chamados, frota/manutenção e visão de gestão.
-- Auxiliar/Atendente: opera chamados sem poder financeiro crítico.
-- Motorista: vê seus chamados, altera status e lança despesas.
+O servidor usa `process.env.PORT` quando disponível, então funciona em Railway/Nixpacks sem build.
 
-## Teste obrigatório após publicar
+## Checklist de produção
 
-1. Abrir `jm.html?v=jm-financeiro-frota-kpi-v13`.
-2. Entrar como `jm@jm.com`.
-3. Criar um chamado com veículo e motorista.
-4. Finalizar o chamado e conferir se gerou receita.
-5. Abrir Financeiro, editar e excluir um lançamento.
-6. Conferir `auditLogs` no Firestore após exclusão.
-7. Lançar manutenção na Frota e conferir custo criado no Financeiro.
-8. Entrar no `motorista.html?v=jm-financeiro-frota-kpi-v13` e lançar despesa.
-9. Aprovar despesa no gestor e conferir custo vinculado a motorista/veículo.
-
-## Observação técnica importante
-
-Esta versão segue a arquitetura atual: HTML/CSS/JavaScript puro, Firebase direto no frontend, GitHub Pages, PWA, Leaflet/OpenStreetMap e Tracker RAFA. Não foi adicionado backend pago nem API paga.
+1. Publicar `firestore.rules` no Firebase.
+2. Ativar autenticação por e-mail/senha no Firebase Authentication.
+3. Criar o primeiro superadmin com `jm@jm.com.br`.
+4. Configurar Tracker, Cloudinary e mapa no Superadmin.
+5. Cadastrar equipe, frota e permissões reais.
+6. Testar abertura de rotas, mapa, chamados, fechamento pelo motorista e financeiro.

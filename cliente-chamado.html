@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JM Guinchos - Acompanhamento</title>
+  <link rel="stylesheet" href="css/style.css?v=jm-v28-5-firestore-callsize-motorista">
+</head>
+<body class="public-page">
+  <main class="content public-shell">
+    <section class="panel no-collapse">
+      <h1>JM Guinchos</h1>
+      <p class="muted">Acompanhamento do atendimento</p>
+      <div id="publicStatus" class="kpi"><span>Status</span><strong>Carregando...</strong></div>
+      <div id="publicDetails" class="public-link-box"></div>
+      <div class="actions" style="margin-top:12px">
+        <a id="publicWhatsapp" class="btn good hidden" target="_blank" rel="noopener">Falar com a JM</a>
+        <a id="publicReport" class="btn hidden" target="_blank" rel="noopener">Ver relatório</a>
+      </div>
+    </section>
+    <section class="panel no-collapse">
+      <h2>Linha do tempo</h2>
+      <div id="publicTimeline" class="timeline"></div>
+    </section>
+    <section class="panel no-collapse" id="publicProofPanel">
+      <h2>Fotos e provas liberadas</h2>
+      <div id="publicProofs" class="proof-thumbs"></div>
+    </section>
+    <section class="panel no-collapse" id="publicPaymentPanel">
+      <h2>Pagamento / negociação</h2>
+      <div id="publicPayment" class="public-link-box"></div>
+    </section>
+    <section class="panel no-collapse" id="publicChatPanel">
+      <h2>Chat com a JM</h2>
+      <div id="publicMessages" class="chat-messages"></div>
+      <form id="publicChatForm" class="form-grid" style="margin-top:12px">
+        <div class="wide"><label>Sua mensagem</label><textarea id="publicChatMessage" required placeholder="Digite sua mensagem para a JM Guinchos"></textarea></div>
+        <button class="btn primary wide" type="submit">Enviar mensagem</button>
+      </form>
+      <p id="publicChatStatus" class="muted small"></p>
+    </section>
+  </main>
+  <footer class="signature-footer" aria-hidden="true"></footer>
+  <div id="toast" class="toast"></div>
+
+  <script src="js/config.firebase.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="js/utils.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script>
+    (function () {
+      "use strict";
+      const utils = window.JM && window.JM.utils || {};
+      const esc = utils.esc || ((v) => String(v == null ? "" : v));
+      const dateTime = utils.dateTime || ((v) => v || "");
+      const toast = utils.toast || ((m) => alert(m));
+      const params = new URLSearchParams(location.search);
+      const token = params.get("t") || "";
+      const cfg = window.JM_CONFIG && window.JM_CONFIG.firebaseConfig || window.JM_CONFIG && window.JM_CONFIG.firebase || {};
+      firebase.initializeApp(cfg);
+      const db = firebase.firestore();
+      const tokenOk = /^[a-f0-9]{24,80}$/i.test(token);
+      if (!tokenOk) {
+        document.getElementById("publicStatus").innerHTML = "<span>Status</span><strong>Link inválido</strong>";
+        return;
+      }
+      const ref = db.collection("publicCalls").doc(token);
+      ref.onSnapshot((snap) => {
+        if (!snap.exists || snap.data().revoked) {
+          document.getElementById("publicStatus").innerHTML = "<span>Status</span><strong>Link indisponível</strong>";
+          document.getElementById("publicDetails").innerHTML = "Este link foi revogado ou expirou.";
+          return;
+        }
+        const data = snap.data();
+        document.getElementById("publicStatus").innerHTML = `<span>Status</span><strong>${esc(data.statusPublic || "Atendimento recebido")}</strong>`;
+        document.getElementById("publicDetails").innerHTML = `<b>${esc(data.serviceType || "Atendimento")}</b><br>
+          Cliente: ${esc(data.clientNameMasked || "-")}<br>
+          Veículo: ${esc(data.vehiclePlateMasked || data.customerVehicle || "-")}<br>
+          Origem: ${esc(data.originLabel || "Endereço protegido")}<br>
+          Destino: ${esc(data.destinationLabel || "Destino protegido")}<br>
+          Motorista: ${esc(data.driverName || "A definir")}`;
+        const timeline = Array.isArray(data.timelinePublic) ? data.timelinePublic : [];
+        document.getElementById("publicTimeline").innerHTML = timeline.length ? timeline.slice().reverse().map((row) => `<div class="timeline-item"><b>${esc(row.status || data.statusPublic || "Atualização")}</b><br>${esc(row.text || "")}<br><small>${dateTime(row.at)}</small></div>`).join("") : "<p class='muted'>Aguardando atualizações.</p>";
+        const proofs = Array.isArray(data.proofsPublic) ? data.proofsPublic : [];
+        document.getElementById("publicProofPanel").classList.toggle("hidden", !proofs.length);
+        document.getElementById("publicProofs").innerHTML = proofs.map((p) => `<a class="proof-thumb" target="_blank" rel="noopener noreferrer" href="${esc(p.url)}"><img src="${esc(p.url)}" alt="${esc(p.label || "Prova")}"><span>${esc(p.label || "Prova")}</span></a>`).join("");
+        document.getElementById("publicPaymentPanel").classList.toggle("hidden", !data.paymentNegotiationEnabled);
+        document.getElementById("publicPayment").innerHTML = data.paymentNegotiationEnabled ? `Status: <b>${esc(data.paymentStatus || "em aberto")}</b><br>Valor autorizado para exibição: <b>${Number(data.amountDue || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</b>` : "";
+        document.getElementById("publicChatPanel").classList.toggle("hidden", data.chatEnabled === false);
+        const wa = String(data.whatsapp || "").replace(/\D+/g, "");
+        const waLink = document.getElementById("publicWhatsapp");
+        if (wa.length >= 10) {
+          waLink.href = "https://wa.me/" + (wa.startsWith("55") ? wa : "55" + wa);
+          waLink.classList.remove("hidden");
+        }
+        const report = document.getElementById("publicReport");
+        if (data.reportEnabled !== false) {
+          report.href = "relatorio.html?t=" + encodeURIComponent(token);
+          report.classList.remove("hidden");
+        }
+      }, (err) => {
+        document.getElementById("publicStatus").innerHTML = "<span>Status</span><strong>Sem acesso</strong>";
+        document.getElementById("publicDetails").textContent = "Não foi possível abrir este link: " + (err && err.message || err);
+      });
+      ref.collection("messages").orderBy("createdAt", "asc").limit(80).onSnapshot((snap) => {
+        const rows = [];
+        snap.forEach((doc) => rows.push(doc.data()));
+        document.getElementById("publicMessages").innerHTML = rows.length ? rows.map((m) => `<div class="chat-message ${esc(m.senderType || "client")}"><b>${esc(m.senderName || (m.senderType === "admin" ? "JM Guinchos" : "Cliente"))}</b><br>${esc(m.message || "")}<br><small>${dateTime(m.createdAt)}</small></div>`).join("") : "<p class='muted small'>Sem mensagens ainda.</p>";
+      }, (err) => {
+        document.getElementById("publicMessages").innerHTML = "<p class='muted small'>Chat indisponível até as regras públicas serem publicadas.</p>";
+        document.getElementById("publicChatStatus").textContent = "Não foi possível abrir o chat: " + (err && err.message || err);
+      });
+      document.getElementById("publicChatForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const input = document.getElementById("publicChatMessage");
+        const message = input.value.trim();
+        if (!message) return;
+        document.getElementById("publicChatStatus").textContent = "Enviando...";
+        try {
+          await ref.collection("messages").add({ senderType: "client", senderName: "Cliente", message, createdAt: new Date().toISOString(), publicToken: token });
+          input.value = "";
+          document.getElementById("publicChatStatus").textContent = "Mensagem enviada.";
+        } catch (err) {
+          document.getElementById("publicChatStatus").textContent = "Não foi possível enviar: " + (err && err.message || err);
+          toast("Não foi possível enviar a mensagem.", "danger");
+        }
+      };
+    }());
+  </script>
+</body>
+</html>

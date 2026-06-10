@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07110f">
+  <title>JM Guinchos - Briefing do Sistema</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg:#07110f; --panel:#0f1c1d; --panel2:#162827; --line:#294342; --text:#edf7f3;
+      --muted:#99b3ac; --accent:#2dd4bf; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
+      --radius:8px;
+    }
+    html[data-theme="light"] {
+      --bg:#f4f7fb; --panel:#ffffff; --panel2:#eef4f8; --line:#cbd8e3; --text:#0f172a;
+      --muted:#526173; --accent:#087c89; --green:#15803d; --amber:#b45309; --red:#dc2626;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding-bottom:28px;
+    }
+    header {
+      position:sticky; top:0; z-index:10;
+      border-bottom:1px solid var(--line);
+      background:rgba(7,17,31,.94);
+      backdrop-filter:blur(10px);
+    }
+    .top {
+      max-width:1180px; margin:0 auto; padding:14px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .mark {
+      width:44px; height:44px; display:grid; place-items:center;
+      border:1px solid rgba(56,189,248,.55); border-radius:var(--radius);
+      color:var(--accent); font-weight:900;
+    }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:1.25rem; margin-bottom:3px; }
+    h2 { font-size:1rem; letter-spacing:.08em; text-transform:uppercase; }
+    .muted { color:var(--muted); }
+    .small { font-size:.82rem; }
+    .wrap { max-width:1180px; margin:0 auto; padding:18px; }
+    .hero {
+      display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px; align-items:stretch;
+      margin-bottom:14px;
+    }
+    .panel, .card {
+      background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    }
+    .panel { padding:16px; }
+    .card { padding:13px; }
+    .grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; }
+    .col-3 { grid-column:span 3; } .col-4 { grid-column:span 4; } .col-6 { grid-column:span 6; } .col-8 { grid-column:span 8; } .col-12 { grid-column:span 12; }
+    label { display:block; color:var(--muted); font-size:.73rem; text-transform:uppercase; letter-spacing:.08em; margin:0 0 6px; }
+    input, select, textarea {
+      width:100%; border:1px solid var(--line); background:#102033; color:var(--text);
+      border-radius:var(--radius); padding:11px 12px; outline:none;
+    }
+    textarea { min-height:94px; resize:vertical; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(56,189,248,.12); }
+    .checks { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .check {
+      display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--line);
+      border-radius:var(--radius); background:rgba(255,255,255,.03); color:var(--text); font-size:.9rem;
+    }
+    .check input { width:auto; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .btn {
+      border:1px solid var(--line); background:var(--panel2); color:var(--text);
+      padding:10px 12px; border-radius:var(--radius); font-weight:850; cursor:pointer;
+      text-transform:uppercase; letter-spacing:.04em; font-size:.78rem; text-decoration:none;
+    }
+    .btn.primary { background:#075985; border-color:#0ea5e9; color:#fff; }
+    .btn.good { background:#14532d; border-color:#22c55e; color:#fff; }
+    .btn.warn { background:#713f12; border-color:#f59e0b; color:#fff; }
+    .progress { height:10px; background:#0b1626; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+    .progress span { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--green)); transition:.2s; }
+    .section { margin-bottom:14px; }
+    .section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+    .badge {
+      display:inline-flex; align-items:center; padding:4px 7px; border-radius:999px; border:1px solid rgba(56,189,248,.5);
+      background:rgba(56,189,248,.12); color:var(--accent); font-weight:800; font-size:.72rem;
+    }
+    .output { min-height:240px; white-space:pre-wrap; font-family:Consolas, "Courier New", monospace; font-size:.82rem; }
+    .signature {
+      position:fixed; right:14px; bottom:7px; color:rgba(141,162,189,.78);
+      font-size:.66rem; font-weight:850; letter-spacing:.08em; text-transform:uppercase;
+    }
+    .theme-toggle { position:fixed; right:14px; bottom:32px; z-index:30; min-height:42px; border-radius:999px; box-shadow:0 14px 34px rgba(0,0,0,.24); }
+    html[data-theme="light"] header { background:rgba(244,247,251,.94); }
+    html[data-theme="light"] input, html[data-theme="light"] select, html[data-theme="light"] textarea { background:#fff; color:var(--text); border-color:#bed0df; }
+    @media (max-width:900px) {
+      .hero { grid-template-columns:1fr; }
+      .col-3,.col-4,.col-6,.col-8 { grid-column:span 12; }
+      .checks { grid-template-columns:1fr; }
+      .top { align-items:flex-start; flex-direction:column; }
+      .actions .btn { width:100%; text-align:center; }
+      .signature { left:0; right:0; text-align:center; font-size:.58rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <div class="brand">
+        <div class="mark">JM</div>
+        <div>
+          <h1>Briefing para construir o sistema perfeito da JM</h1>
+          <div class="muted small">Responda com a verdade da operação: atendimento, seguradoras, motoristas, frota, pagamentos e dor diária.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="jm.html">Abrir painel</a>
+        <button class="btn warn" id="clearBtn" type="button">Limpar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="panel">
+        <h2>Como usar</h2>
+        <p class="muted">Este formulário existe para impedir achismo. A gestora deve responder como trabalha hoje, quais sites usa, quem cobra, quem paga, onde atrasa e o que precisa aparecer automaticamente. O resultado vira um documento técnico para evoluir o SaaS da JM sem inventar fluxo falso.</p>
+        <div class="grid">
+          <div class="card col-4"><b>1. Operação real</b><br><span class="muted small">Chamado, despacho, motorista, pátio e fechamento.</span></div>
+          <div class="card col-4"><b>2. Seguradoras</b><br><span class="muted small">Portal, e-mail, WhatsApp, protocolo, SLA e faturamento.</span></div>
+          <div class="card col-4"><b>3. Financeiro</b><br><span class="muted small">Receber, pagar, glosa, nota, comprovante e prazo.</span></div>
+        </div>
+      </div>
+      <aside class="panel">
+        <h2>Progresso</h2>
+        <div class="progress"><span id="progressBar"></span></div>
+        <p class="muted small" id="progressText" style="margin-top:10px">0% preenchido</p>
+        <div class="actions">
+          <button class="btn primary" id="buildBtn" type="button">Gerar resumo</button>
+          <button class="btn good" id="copyBtn" type="button">Copiar</button>
+          <button class="btn" id="downloadBtn" type="button">Baixar JSON</button>
+          <button class="btn" id="whatsappBtn" type="button">Enviar WhatsApp</button>
+        </div>
+      </aside>
+    </section>
+
+    <form id="briefingForm">
+      <section class="panel section">
+        <div class="section-head"><div><h2>1. Quem está respondendo</h2><p class="muted small">Dados para entender quem decide, quem usa e quem sente a dor da operação.</p></div><span class="badge">Base</span></div>
+        <div class="grid">
+          <div class="col-4"><label>Nome da pessoa</label><input name="respondenteNome" required></div>
+          <div class="col-4"><label>Cargo/função</label><input name="respondenteCargo" placeholder="Gestora, atendente, financeiro..."></div>
+          <div class="col-4"><label>WhatsApp</label><input name="respondenteWhatsapp" inputmode="tel"></div>
+          <div class="col-6"><label>Quem é o dono/responsável final?</label><input name="donoResponsavel"></div>
+          <div class="col-6"><label>Quantas pessoas vão usar o sistema?</label><input name="usuariosQuantidade" inputmode="numeric"></div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-head"><div><h2>2. Operação atual</h2><p class="muted small">Explique o fluxo atual do acionamento até o fechamento.</p></div><span class="badge">Chamados</span></div>
+        <div class="grid">
+          <div class="col-12"><label>Conte o passo a passo do chamado hoje</label><textarea name="fluxoAtual" required placeholder="Quem recebe, onde anota, como despacha, como finaliza, onde arquiva fotos e comprovantes..."></textarea></div>
+          <div class="col-4"><label>Chamados por dia</label><input name="chamadosDia" inputmode="numeric"></div>
+          <div class="col-4"><label>Horário de maior movimento</label><input name="picoOperacao"></div>
+          <div class="col-4"><label>Maior problema operacional</label><input name="maiorProblemaOperacional"></div>
+          <div class="col-12"><label>Tipos de serviço</label><div class="checks">
+            <label class="check"><input type="checkbox" name="servicos" value="Guincho"> Guincho</label>
+            <label class="check"><input type="checkbox" name="servicos" value="Socorro mecânico"> Socorro mecânico</label>
+            <label class="check"><input type="checkbox" name="servicos" value="Munck"> Munck</label>
+            <label class="check"><input type="checkbox" name="servicos" value="Pátio"> Pátio</label>
+            <label class="check"><input type="checkbox" name="servicos" value="Remoção"> Remoção</label>
+            <label class="check"><input type="checkbox" name="servicos" value="Acidente"> Acidente</label>
+          </div></div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-head"><div><h2>3. Seguradoras e integrações</h2><p class="muted small">Não basta dizer "integrar". Precisamos saber de onde o chamado nasce e qual autorização existe.</p></div><span class="badge">Integração</span></div>
+        <div class="grid">
+          <div class="col-12"><label>Quais seguradoras/assistências mandam chamados?</label><textarea name="seguradorasLista" placeholder="Nome, portal, contato, se exige foto/checklist, prazo de pagamento..."></textarea></div>
+          <div class="col-6"><label>Como o chamado chega hoje?</label><select name="entradaChamado"><option>WhatsApp</option><option>E-mail</option><option>Portal da seguradora</option><option>Telefone</option><option>API/webhook</option><option>Misto</option></select></div>
+          <div class="col-6"><label>Existe login autorizado nos portais?</label><select name="loginPortais"><option>Sim</option><option>Não</option><option>Alguns</option><option>Não sei</option></select></div>
+          <div class="col-12"><label>Sites/portais usados e campos que aparecem no acionamento</label><textarea name="portaisCampos" placeholder="URL, protocolo, sinistro, apólice, placa, origem, destino, SLA, valor, fotos exigidas..."></textarea></div>
+          <div class="col-12"><label>Resumo ou transcrição do áudio da gestora</label><textarea name="audioResumo" placeholder="Cole aqui o que ela falou no áudio ou responda com as ideias principais."></textarea></div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-head"><div><h2>4. Clientes, contratos e faturamento</h2><p class="muted small">Aqui nasce o cadastro de clientes e a régua de cobrança.</p></div><span class="badge">Clientes</span></div>
+        <div class="grid">
+          <div class="col-12"><label>Tipos de clientes que precisam cadastro</label><div class="checks">
+            <label class="check"><input type="checkbox" name="tiposClientes" value="Particular"> Particular</label>
+            <label class="check"><input type="checkbox" name="tiposClientes" value="Seguradora"> Seguradora</label>
+            <label class="check"><input type="checkbox" name="tiposClientes" value="Assistência 24h"> Assistência 24h</label>
+            <label class="check"><input type="checkbox" name="tiposClientes" value="Empresa parceira"> Empresa parceira</label>
+            <label class="check"><input type="checkbox" name="tiposClientes" value="Pátio"> Pátio</label>
+            <label class="check"><input type="checkbox" name="tiposClientes" value="Órgão público"> Órgão público</label>
+          </div></div>
+          <div class="col-6"><label>Como cobra seguradora?</label><textarea name="cobrancaSeguradora" placeholder="Por chamado, lote, quinzenal, mensal, nota, boleto, comprovantes..."></textarea></div>
+          <div class="col-6"><label>Como cobra cliente particular?</label><textarea name="cobrancaParticular" placeholder="PIX antes, PIX depois, cartão, dinheiro, assinatura, parcelamento..."></textarea></div>
+          <div class="col-12"><label>O que causa glosa, atraso ou prejuízo?</label><textarea name="glosasPrejuizos"></textarea></div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-head"><div><h2>5. Motorista, frota e campo</h2><p class="muted small">O app precisa funcionar no sol, no celular e com pressa.</p></div><span class="badge">Campo</span></div>
+        <div class="grid">
+          <div class="col-4"><label>Quantidade de motoristas</label><input name="motoristasQuantidade" inputmode="numeric"></div>
+          <div class="col-4"><label>Quantidade de veículos</label><input name="veiculosQuantidade" inputmode="numeric"></div>
+          <div class="col-4"><label>Rastreador usado</label><input name="rastreador" placeholder="RAFA, Trackar, outro..."></div>
+          <div class="col-12"><label>O motorista precisa enviar o quê?</label><div class="checks">
+            <label class="check"><input type="checkbox" name="motoristaEnvia" value="Fotos do veículo"> Fotos do veículo</label>
+            <label class="check"><input type="checkbox" name="motoristaEnvia" value="Comprovante"> Comprovante</label>
+            <label class="check"><input type="checkbox" name="motoristaEnvia" value="Checklist"> Checklist</label>
+            <label class="check"><input type="checkbox" name="motoristaEnvia" value="Despesa"> Despesa</label>
+            <label class="check"><input type="checkbox" name="motoristaEnvia" value="KM"> KM</label>
+            <label class="check"><input type="checkbox" name="motoristaEnvia" value="Observação"> Observação</label>
+          </div></div>
+          <div class="col-12"><label>Quais informações o motorista não pode ver?</label><textarea name="restricoesMotorista" placeholder="Lucro, valor do contrato, outros motoristas, financeiro geral..."></textarea></div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-head"><div><h2>6. Relatórios e decisão do dono</h2><p class="muted small">O painel do dono precisa mostrar lucro, problema e produtividade sem maquiagem.</p></div><span class="badge">Gestão</span></div>
+        <div class="grid">
+          <div class="col-12"><label>Quais números o dono quer ver todo dia?</label><textarea name="kpisDono" placeholder="Receita, despesas, lucro por veículo, motorista mais produtivo, chamados atrasados, seguradora que mais dá glosa..."></textarea></div>
+          <div class="col-12"><label>O que faria a gestora dizer: agora sim esse sistema ficou perfeito?</label><textarea name="definicaoSucesso" required></textarea></div>
+        </div>
+      </section>
+    </form>
+
+    <section class="panel section">
+      <div class="section-head"><div><h2>Resumo gerado</h2><p class="muted small">Use este texto para orientar a próxima evolução do SaaS sem perder a verdade operacional.</p></div><span class="badge">Saída</span></div>
+      <textarea id="output" class="output" readonly placeholder="Clique em Gerar resumo."></textarea>
+    </section>
+  </main>
+
+  <div class="signature" aria-hidden="true"></div>
+
+  <script>
+    (function () {
+      "use strict";
+      const STORAGE_KEY = "jm_guinchos_briefing_v1";
+      const form = document.getElementById("briefingForm");
+      const output = document.getElementById("output");
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+
+      function fields() {
+        return Array.from(form.querySelectorAll("input, select, textarea"));
+      }
+
+      function collect() {
+        const data = {};
+        fields().forEach((field) => {
+          if (field.type === "checkbox") {
+            data[field.name] = data[field.name] || [];
+            if (field.checked) data[field.name].push(field.value);
+            return;
+          }
+          data[field.name] = field.value.trim();
+        });
+        data.generatedAt = new Date().toISOString();
+        return data;
+      }
+
+      function apply(data) {
+        if (!data) return;
+        fields().forEach((field) => {
+          if (field.type === "checkbox") {
+            field.checked = Array.isArray(data[field.name]) && data[field.name].includes(field.value);
+            return;
+          }
+          if (data[field.name] != null) field.value = data[field.name];
+        });
+        updateProgress();
+      }
+
+      function updateProgress() {
+        const all = fields().filter((f) => f.type !== "checkbox");
+        const filled = all.filter((f) => String(f.value || "").trim()).length;
+        const checks = Array.from(form.querySelectorAll("input[type='checkbox']"));
+        const groups = Array.from(new Set(checks.map((c) => c.name)));
+        const checkedGroups = groups.filter((name) => checks.some((c) => c.name === name && c.checked)).length;
+        const total = all.length + groups.length;
+        const done = filled + checkedGroups;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        progressBar.style.width = pct + "%";
+        progressText.textContent = pct + "% preenchido";
+      }
+
+      function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collect()));
+        updateProgress();
+      }
+
+      function summary(data) {
+        return [
+          "BRIEFING JM GUINCHOS - SISTEMA 100/10",
+          "",
+          "RESPONDENTE",
+          "- Nome: " + (data.respondenteNome || ""),
+          "- Cargo: " + (data.respondenteCargo || ""),
+          "- WhatsApp: " + (data.respondenteWhatsapp || ""),
+          "- Responsável final: " + (data.donoResponsavel || ""),
+          "- Usuários previstos: " + (data.usuariosQuantidade || ""),
+          "",
+          "OPERAÇÃO",
+          "- Fluxo atual: " + (data.fluxoAtual || ""),
+          "- Chamados/dia: " + (data.chamadosDia || ""),
+          "- Pico: " + (data.picoOperacao || ""),
+          "- Maior problema: " + (data.maiorProblemaOperacional || ""),
+          "- Serviços: " + ((data.servicos || []).join(", ") || ""),
+          "",
+          "SEGURADORAS E INTEGRAÇÕES",
+          "- Seguradoras: " + (data.seguradorasLista || ""),
+          "- Entrada do chamado: " + (data.entradaChamado || ""),
+          "- Login nos portais: " + (data.loginPortais || ""),
+          "- Portais/campos: " + (data.portaisCampos || ""),
+          "- Áudio/resumo da gestora: " + (data.audioResumo || ""),
+          "",
+          "CLIENTES E FINANCEIRO",
+          "- Tipos de cliente: " + ((data.tiposClientes || []).join(", ") || ""),
+          "- Cobrança seguradora: " + (data.cobrancaSeguradora || ""),
+          "- Cobrança particular: " + (data.cobrancaParticular || ""),
+          "- Glosas/prejuízos: " + (data.glosasPrejuizos || ""),
+          "",
+          "MOTORISTA E FROTA",
+          "- Motoristas: " + (data.motoristasQuantidade || ""),
+          "- Veículos: " + (data.veiculosQuantidade || ""),
+          "- Rastreador: " + (data.rastreador || ""),
+          "- Motorista envia: " + ((data.motoristaEnvia || []).join(", ") || ""),
+          "- Restrições motorista: " + (data.restricoesMotorista || ""),
+          "",
+          "GESTÃO",
+          "- KPIs do dono: " + (data.kpisDono || ""),
+          "- Definição de sucesso: " + (data.definicaoSucesso || "")
+        ].join("\n");
+      }
+
+      function generate() {
+        const data = collect();
+        output.value = summary(data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        return data;
+      }
+
+      form.addEventListener("input", save);
+      document.getElementById("buildBtn").onclick = generate;
+      document.getElementById("copyBtn").onclick = async () => {
+        if (!output.value) generate();
+        await navigator.clipboard.writeText(output.value).catch(() => {});
+      };
+      document.getElementById("downloadBtn").onclick = () => {
+        const data = generate();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "briefing-jm-guinchos.json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+      document.getElementById("whatsappBtn").onclick = () => {
+        if (!output.value) generate();
+        const text = encodeURIComponent(output.value.slice(0, 3500));
+        const win = window.open("https://wa.me/?text=" + text, "_blank", "noopener,noreferrer");
+        if (win) win.opener = null;
+      };
+      document.getElementById("clearBtn").onclick = () => {
+        if (!confirm("Limpar todas as respostas deste navegador?")) return;
+        localStorage.removeItem(STORAGE_KEY);
+        form.reset();
+        output.value = "";
+        updateProgress();
+      };
+      apply(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
+      updateProgress();
+      const themeBtn = document.createElement("button");
+      themeBtn.type = "button";
+      themeBtn.className = "btn theme-toggle";
+      function applyTheme(theme) {
+        const next = theme === "light" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        document.documentElement.style.colorScheme = next;
+        localStorage.setItem("jm-theme", next);
+        themeBtn.textContent = next === "light" ? "Modo escuro" : "Modo claro";
+      }
+      applyTheme(localStorage.getItem("jm-theme") || "dark");
+      themeBtn.onclick = () => applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+      document.body.appendChild(themeBtn);
+    }());
+  </script>
+</body>
+</html>

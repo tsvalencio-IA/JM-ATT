@@ -1,12 +1,12 @@
 {
   "name": "JM Guinchos",
   "short_name": "JM Guinchos",
-  "description": "Gestao operacional, mapa, tracker, motorista e financeiro para guinchos.",
+  "description": "Gestão operacional, mapa, tracker, motorista e financeiro para guinchos.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#07111f",
-  "theme_color": "#07111f",
+  "background_color": "#07110f",
+  "theme_color": "#07110f",
   "orientation": "portrait",
   "icons": [
     {

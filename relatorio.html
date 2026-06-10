@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JM Guinchos - Relatório de Provas</title>
+  <link rel="stylesheet" href="css/style.css?v=jm-v28-5-firestore-callsize-motorista">
+  <style>
+    body { background:var(--bg); color:var(--text); }
+    .report-page { max-width: 1060px; margin: 0 auto; padding: 24px; }
+    .report-card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px; margin-bottom:14px; }
+    .report-header { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; border-bottom:2px solid #0f766e; padding-bottom:14px; }
+    .report-brand h1 { margin:0 0 6px; font-size:26px; color:var(--text); }
+    .report-brand p { margin:0; color:var(--muted); }
+    .report-meta { min-width:190px; border:1px solid var(--line); border-radius:10px; padding:10px; text-align:right; color:var(--muted); }
+    .report-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
+    .report-photo { break-inside: avoid; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--panel); }
+    .report-photo img { width:100%; height:112px; object-fit:cover; object-position:center; display:block; background:#e2e8f0; }
+    .report-photo span { display:block; padding:8px; color:#475569; }
+    .report-stage { break-inside: avoid; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:12px; background:var(--panel); }
+    .report-stage .report-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+    .signature-image { width:100%; max-width:360px; height:92px; object-fit:contain; border:1px solid #dbe3ef; border-radius:8px; background:#fff; }
+    .print-actions { position: sticky; top: 0; background:var(--bg); padding:10px 0; z-index: 5; }
+    @media print {
+      .print-actions { display:none; }
+      body { background:#fff; }
+      .report-page { padding:0; }
+      .report-card { border:0; border-bottom:1px solid #dbe3ef; border-radius:0; }
+      .report-photo img { height:82px; }
+      .signature-image { height:78px; }
+      .report-stage .report-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+      .signature-footer { position: fixed; bottom: 8px; left:0; right:0; }
+    }
+    @media (max-width: 760px) { .report-grid, .report-stage .report-grid { grid-template-columns:1fr 1fr; } .report-page { padding:12px; } .report-header { flex-direction:column; } .report-meta { text-align:left; width:100%; } }
+  </style>
+</head>
+<body>
+  <main class="report-page">
+    <div class="print-actions actions">
+      <button class="btn primary" onclick="window.print()">Imprimir / salvar PDF</button>
+      <a class="btn" href="jm.html">Voltar ao painel</a>
+    </div>
+    <section class="report-card report-header">
+      <div class="report-brand">
+        <h1>Laudo técnico de atendimento</h1>
+        <p><b>JM Guinchos</b> · Sao Jose do Rio Preto - SP · (17) 99651-9832</p>
+      </div>
+      <div class="report-meta">
+        <b id="reportStatus" class="badge info">Carregando...</b><br>
+        <small id="reportGeneratedAt"></small>
+      </div>
+    </section>
+    <section class="report-card">
+      <h2>Dados do chamado</h2>
+      <div id="reportDetails" class="report-grid"></div>
+    </section>
+    <section class="report-card">
+      <h2>Linha do tempo</h2>
+      <div id="reportTimeline"></div>
+    </section>
+    <section class="report-card">
+      <h2>Fotos e provas</h2>
+      <div id="reportProofs" class="report-grid"></div>
+    </section>
+    <section class="report-card">
+      <h2>Avarias registradas</h2>
+      <div id="reportDamage"></div>
+    </section>
+    <section class="report-card">
+      <h2>Ficha técnica do veículo</h2>
+      <div id="reportInspection"></div>
+    </section>
+    <section class="report-card">
+      <h2>Assinaturas e aceites</h2>
+      <div id="reportSignatures" class="report-grid"></div>
+    </section>
+  </main>
+  <footer class="signature-footer" aria-hidden="true"></footer>
+
+  <script src="js/config.firebase.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="js/utils.js?v=jm-v28-5-firestore-callsize-motorista"></script>
+  <script>
+    (function () {
+      "use strict";
+      const utils = window.JM && window.JM.utils || {};
+      const esc = utils.esc || ((v) => String(v == null ? "" : v));
+      const dateTime = utils.dateTime || ((v) => v || "");
+      const token = new URLSearchParams(location.search).get("t") || "";
+      const cfg = window.JM_CONFIG && window.JM_CONFIG.firebaseConfig || window.JM_CONFIG && window.JM_CONFIG.firebase || {};
+      firebase.initializeApp(cfg);
+      const db = firebase.firestore();
+      document.getElementById("reportGeneratedAt").textContent = "Gerado em " + new Date().toLocaleString("pt-BR");
+      if (!/^[a-f0-9]{24,80}$/i.test(token)) {
+        document.getElementById("reportStatus").textContent = "Token inválido";
+        return;
+      }
+      db.collection("publicCalls").doc(token).get().then((snap) => {
+        if (!snap.exists || snap.data().revoked || snap.data().reportEnabled === false) {
+          document.getElementById("reportStatus").textContent = "Relatório indisponível";
+          return;
+        }
+        const data = snap.data();
+        document.getElementById("reportStatus").textContent = data.statusPublic || "Atendimento";
+        document.getElementById("reportDetails").innerHTML = [
+          ["Status", data.statusPublic],
+          ["Serviço", data.serviceType],
+          ["Cliente", data.clientNameMasked],
+          ["Placa/veículo", data.vehiclePlateMasked || data.customerVehicle],
+          ["Origem", data.originLabel || "Protegido"],
+          ["Destino", data.destinationLabel || "Protegido"],
+          ["Motorista", data.driverName || "A definir"],
+          ["Veículo da frota", data.fleetVehicle || ""],
+          ["Gerado em", new Date().toLocaleString("pt-BR")]
+        ].map((row) => `<div><b>${esc(row[0])}</b><br>${esc(row[1] || "-")}</div>`).join("");
+        const timeline = Array.isArray(data.timelinePublic) ? data.timelinePublic : [];
+        document.getElementById("reportTimeline").innerHTML = timeline.length ? timeline.map((row) => `<p><b>${esc(row.status || "Atualização")}</b><br>${esc(row.text || "")}<br><small>${dateTime(row.at)}</small></p>`).join("") : "<p>Sem linha do tempo pública.</p>";
+        const proofs = Array.isArray(data.proofsPublic) ? data.proofsPublic : [];
+        const groups = [
+          ["Antes do carregamento", ["front", "rear", "right", "left", "dashboard"]],
+          ["Carregado no guincho", ["load_after"]],
+          ["Depois da entrega", ["delivery_front", "delivery_rear", "delivery_right", "delivery_left", "delivery_dashboard", "final"]],
+          ["Avarias e complementos", ["damage"]]
+        ];
+        const photoByType = (type) => proofs.find((p) => p.type === type);
+        document.getElementById("reportProofs").innerHTML = proofs.length ? groups.map((group) => {
+          const cards = group[1].map((type) => photoByType(type)).filter(Boolean).map((p) => `<div class="report-photo"><img src="${esc(p.url)}" alt="${esc(p.label || "Prova")}"><span>${esc(p.label || "Prova")}</span></div>`).join("");
+          return cards ? `<div class="report-stage"><h3>${esc(group[0])}</h3><div class="report-grid">${cards}</div></div>` : "";
+        }).join("") || proofs.map((p) => `<div class="report-photo"><img src="${esc(p.url)}" alt="${esc(p.label || "Prova")}"><span>${esc(p.label || "Prova")}</span></div>`).join("") : "<p>Sem fotos liberadas para este relatório.</p>";
+        const damage = data.damageAssessmentPublic || {};
+        const parts = Array.isArray(damage.parts) ? damage.parts.map((p) => p.label || p.key).filter(Boolean) : [];
+        document.getElementById("reportDamage").innerHTML = parts.length || damage.details ? `<p><b>Tipo:</b> ${esc(damage.vehicleType || "-")}</p><p><b>Partes marcadas:</b> ${esc(parts.join(", ") || "-")}</p><p><b>Descrição:</b><br>${esc(damage.details || "-")}</p>` : "<p>Sem avarias públicas registradas.</p>";
+        const inspection = data.vehicleInspectionPublic || {};
+        const accessoryRows = Array.isArray(inspection.accessories) ? inspection.accessories.flatMap((group) => (group.items || []).map((item) => ({
+          group: group.title || "",
+          label: item.label || item.key || "",
+          value: item.shortLabel || item.value || ""
+        }))).filter((item) => item.value) : [];
+        document.getElementById("reportInspection").innerHTML = `<div class="report-grid">
+          <div><b>Combustível</b><br>${esc(inspection.fuelLevel || "-")}</div>
+          <div><b>Odômetro</b><br>${esc(inspection.odometer || "-")}</div>
+          <div><b>Pneus</b><br>${esc(inspection.tireCondition || "-")}</div>
+          <div><b>Chave/documento</b><br>${esc(inspection.keyDocument || "-")}</div>
+          <div><b>Veículo carregado</b><br>${esc(inspection.vehicleLoaded || "-")}</div>
+          <div><b>Fácil remoção</b><br>${esc(inspection.easyRemoval || "-")}</div>
+        </div>
+        <p><b>Responsável retirada:</b> ${esc(inspection.pickupResponsible && inspection.pickupResponsible.name || "-")} ${esc(inspection.pickupResponsible && inspection.pickupResponsible.document || "")}<br>
+        <b>Responsável entrega:</b> ${esc(inspection.deliveryResponsible && inspection.deliveryResponsible.name || "-")} ${esc(inspection.deliveryResponsible && inspection.deliveryResponsible.document || "")}</p>
+        ${inspection.technicalNotes ? `<p><b>Observações técnicas:</b><br>${esc(inspection.technicalNotes)}</p>` : ""}
+        ${accessoryRows.length ? `<div class="report-grid">${accessoryRows.map((item) => `<div><b>${esc(item.label)}</b><br>${esc(item.group)} · ${esc(item.value)}</div>`).join("")}</div>` : `<p class="muted">Sem acessórios liberados para este relatório.</p>`}`;
+        const signatures = Object.assign({}, data.phaseSignaturesPublic || {});
+        if (data.customerSignaturePublic && !signatures.finalizacao) signatures.finalizacao = data.customerSignaturePublic;
+        const sigRows = Object.entries(signatures).map(([phase, sig]) => {
+          const url = sig && (sig.signatureUrl || sig.cloudinaryUrl || sig.url);
+          if (url) return `<div><h3>${esc(phase)}</h3><p>${esc(sig.name || "Cliente")} ${esc(sig.document || "")}<br>${esc(sig.acceptedText || "")}<br><small>${dateTime(sig.signedAt)}</small></p><img class="signature-image" src="${esc(url)}" alt="Assinatura ${esc(phase)}"></div>`;
+          if (sig && sig.refused) return `<div><h3>${esc(phase)}</h3><p><b>Sem assinatura.</b><br>${esc(sig.refusalReason || "")}<br>${esc(sig.acceptedText || "")}</p></div>`;
+          return "";
+        }).join("");
+        document.getElementById("reportSignatures").innerHTML = sigRows || "<p>Sem assinatura liberada para este relatório.</p>";
+      }).catch((err) => {
+        document.getElementById("reportStatus").textContent = "Falha ao abrir relatório: " + (err && err.message || err);
+      });
+    }());
+  </script>
+</body>
+</html>

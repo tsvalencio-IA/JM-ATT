@@ -1,0 +1,38 @@
+JM GUINCHOS V28 - IA seguradoras, checklist profissional e tema claro/escuro
+
+Base usada:
+- ZIP atual do GitHub: jm3-seguradoras-main (3).zip
+
+Principais melhorias:
+- Assistente IA agora interpreta textos de acionamento de seguradoras/assistencias como Maxpar, Amparo e Veniti.
+- O parser extrai protocolo/OS, beneficiario, solicitante, telefone, seguradora/assistencia, cliente/associado, placa, veiculo, cor, origem, destino, valor, percurso, distancia da base/viatura, perguntas, tarifas, links e observacoes.
+- O rascunho pode ser aplicado no formulario de chamado ou salvo na fila integrationInbox como sourceType = ai_insurance_parser, preservando texto bruto e dados normalizados.
+- Painel motorista recebeu ficha tecnica mais proxima do checklist fisico: combustivel, odometro, pneus, chave/documento, veiculo carregado, facil remocao, observacoes tecnicas, responsavel da retirada e responsavel da entrega.
+- Painel motorista recebeu checklist S/N/A de acessorios e equipamentos por grupos: parte externa, painel/porta/documentos e parte interna.
+- Provas salvas agora carregam vehicleInspection dentro de proofChecklist, ficam no chamado e no historico callProofs.
+- Laudo/relatorio inclui ficha tecnica, responsaveis e acessorios quando as provas forem liberadas.
+- Modo claro/escuro foi adicionado nas telas principais e no formulario avulso, com preferencia salva em localStorage.
+- Cache PWA atualizado para jm-v28-ia-seguradoras-checklist-tema.
+
+Preservado:
+- Firebase Auth, Firestore, RTDB, Cloudinary, PWA, Leaflet/OSRM, Google opcional, Tracker RAFA, GPS celular, financeiro, frota, motorista, superadmin, portal publico e relatorio.
+- firestore.rules e database.rules.json nao foram alterados nesta entrega.
+
+Testes executados:
+- node --check js/app.js
+- node --check js/mapa.js
+- node --check js/motorista.js
+- node --check js/utils.js
+- node --check js/google-maps.js
+- node --check js/firebase.js
+- node --check js/tracker.js
+- node --check js/superadmin.js
+- node --check service-worker.js
+- JSON parse em database.rules.json e manifest.json
+- Teste local do parser com exemplos Maxpar e Amparo.
+- Verificacao local em http://127.0.0.1:8795/jm.html para cache V28, botao de tema e ausencia de mojibake na tela de login.
+
+Publicacao:
+- Subir todos os arquivos do ZIP completo no GitHub Pages.
+- Depois de publicar, abrir o site e forcar atualizacao: Ctrl+F5 no PC ou limpar dados do site no celular.
+- Em caso de PWA instalado, remover e instalar novamente para garantir cache novo.
