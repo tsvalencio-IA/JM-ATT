@@ -1254,40 +1254,70 @@ td { font-size: .88rem; }
 .proof-accessory-row select { min-height: 34px; padding: 6px; }
 .damage-diagram {
   position: relative;
-  min-height: 310px;
-  padding: 12px;
-  border: 1px solid rgba(45, 212, 191, .18);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,.025);
+  min-height: 430px;
+  padding: 14px;
+  border: 1px solid rgba(45, 212, 191, .28);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(148, 163, 184, .06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, .06) 1px, transparent 1px),
+    rgba(15, 23, 42, .18);
+  background-size: 22px 22px, 22px 22px, auto;
   overflow: hidden;
 }
 .damage-vehicle-svg {
   position: absolute;
-  inset: 42px 14px 28px;
+  inset: 22px 16px 104px;
   display: grid;
   place-items: center;
-  color: rgba(226, 232, 240, .34);
+  color: rgba(226, 232, 240, .48);
   pointer-events: none;
 }
 .damage-vehicle-svg svg {
-  width: min(96%, 560px);
+  width: min(100%, 820px);
   height: 100%;
-  max-height: 230px;
+  max-height: 330px;
 }
-.damage-zone-layer { position: absolute; inset: 0; }
+.damage-zone-layer {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  gap: 8px;
+  pointer-events: none;
+}
 .damage-part,
 .damage-zone {
-  position: absolute;
+  position: relative;
   min-height: 38px;
-  min-width: 92px;
+  min-width: 0;
   border: 1px solid rgba(148, 163, 184, .30);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, .88);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, .82);
   color: var(--text);
-  font-size: .68rem;
+  font-size: .72rem;
   font-weight: 900;
   padding: 8px 10px;
   box-shadow: 0 8px 22px rgba(0,0,0,.20);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  text-align: left;
+  pointer-events: auto;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.damage-zone::before {
+  content: "";
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, .76);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, .12);
 }
 .damage-part.selected,
 .damage-zone.selected {
@@ -1295,18 +1325,10 @@ td { font-size: .88rem; }
   background: rgba(239, 68, 68, .22);
   color: #fecaca;
 }
-.damage-zone-front { left: 5%; top: 43%; }
-.damage-zone-rear { right: 5%; top: 43%; }
-.damage-zone-right { left: 34%; top: 13%; }
-.damage-zone-left { left: 34%; bottom: 12%; }
-.damage-zone-roof { left: 42%; top: 40%; }
-.damage-zone-hood { left: 20%; top: 28%; }
-.damage-zone-trunk { right: 20%; top: 28%; }
-.damage-zone-windshield { left: 40%; top: 25%; }
-.damage-zone-wheels { left: 38%; bottom: 28%; }
-.damage-zone-underbody { left: 42%; bottom: 3%; }
-.damage-zone-truck_bed { left: 30%; top: 55%; }
-.damage-zone-other { right: 5%; bottom: 5%; }
+.damage-zone.selected::before {
+  background: rgba(239, 68, 68, .96);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, .18);
+}
 .damage-editor {
   margin-top: 10px;
   padding: 10px;
@@ -1348,19 +1370,16 @@ td { font-size: .88rem; }
   .finance-toolbar, .proof-phase-grid { grid-template-columns: 1fr; }
   .signature-mode-toolbar { grid-template-columns: 1fr; }
   .proof-stage-buttons { grid-template-columns: 1fr; }
-  .damage-diagram { min-height: 360px; }
+  .damage-diagram { min-height: 520px; }
+  .damage-vehicle-svg { inset: 16px 8px 190px; }
+  .damage-vehicle-svg svg { max-height: 300px; }
+  .damage-zone-layer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .damage-part, .damage-zone {
-    min-width: 84px;
+    min-width: 0;
     min-height: 36px;
-    font-size: .62rem;
+    font-size: .64rem;
     padding: 7px 8px;
   }
-  .damage-zone-front { left: 4%; top: 45%; }
-  .damage-zone-rear { right: 4%; top: 45%; }
-  .damage-zone-right { left: 30%; top: 8%; }
-  .damage-zone-left { left: 30%; bottom: 8%; }
-  .damage-zone-roof { left: 38%; top: 41%; }
-  .damage-zone-windshield { left: 36%; top: 25%; }
   .finance-toolbar #financeSearch { grid-column: auto; }
   .panel-collapse-toggle { min-width: 112px; }
 }

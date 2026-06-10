@@ -4,7 +4,7 @@
   const { $, esc, parseMoney, toast, statusClass, routeKm, mapsRouteUrl, statusKey, statusLabel, isFinalStatus, setupCollapsiblePanels, pointFrom } = window.JM.utils;
   const { auth, db, arrayUnion, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
-  const DRIVER_FLOW_VERSION = "jm-v28-3-desenho-checklist-tecnico";
+  const DRIVER_FLOW_VERSION = "jm-v28-4-rota-checklist-hotfix";
   const state = { user: null, profile: null, calls: {}, vehicles: {}, expenses: {}, settings: {}, selectedCallId: "", driverLivePoint: null };
   const unsubscribers = [];
   let driverLocationWatchId = null;
@@ -1543,6 +1543,17 @@
       updatedAt: new Date().toISOString(),
       timeline: arrayUnion({ at: new Date().toISOString(), by: state.profile.nome || state.user.email, text: "Motorista alterou status para " + label })
     };
+    if (key === "finalizado") {
+      const currentBilling = String(call.billingStatus || "").toLowerCase();
+      const hasValue = Number(call.valor || 0) > 0;
+      if (hasValue && !/(recebido|fechado)/.test(currentBilling)) {
+        updates.billingStatus = currentBilling.includes("receber") ? call.billingStatus : "a_faturar";
+        updates.financePending = true;
+      } else if (!hasValue) {
+        updates.billingStatus = call.billingStatus || "sem_valor";
+        updates.financePending = false;
+      }
+    }
     await db.collection("calls").doc(id).update(updates);
     await syncPublicCallFromDriver(call, updates).catch((err) => console.warn("Falha ao atualizar espelho público", err));
     if (key === "finalizado") stopDriverPhoneLocation();

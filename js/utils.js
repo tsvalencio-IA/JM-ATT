@@ -170,8 +170,11 @@
   }
 
   function coords(lat, lng) {
-    const la = Number(String(lat || "").replace(",", "."));
-    const ln = Number(String(lng || "").replace(",", "."));
+    const rawLat = lat == null ? "" : String(lat).trim();
+    const rawLng = lng == null ? "" : String(lng).trim();
+    if (!rawLat || !rawLng) return null;
+    const la = Number(rawLat.replace(",", "."));
+    const ln = Number(rawLng.replace(",", "."));
     if (!Number.isFinite(la) || !Number.isFinite(ln) || Math.abs(la) > 90 || Math.abs(ln) > 180) return null;
     return { lat: la, lng: ln };
   }

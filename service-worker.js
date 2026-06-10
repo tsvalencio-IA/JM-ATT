@@ -1,4 +1,4 @@
-const CACHE_NAME = "jm-v28-1-rota-preco-pedagio-inteligente";
+const CACHE_NAME = "jm-v28-4-rota-checklist-hotfix";
 const ASSETS = [
   "./",
   "./index.html",

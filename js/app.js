@@ -10,7 +10,7 @@
   const { auth, secondaryAuth, db, ts, arrayUnion, emailIsAdmin, getRealtimeDb, rtdbKey } = window.JM.firebase;
   const cfg = window.JM_CONFIG || {};
   const SYSTEM_SIGNATURE = "";
-  const LOGIN_FLOW_VERSION = "jm-v28-1-rota-preco-pedagio-inteligente";
+  const LOGIN_FLOW_VERSION = "jm-v28-4-rota-checklist-hotfix";
   let trackerTimer = null;
   let trackerBusy = false;
   let mapRefreshTimer = null;
@@ -697,7 +697,7 @@
       },
       tollEstimate: {
         total: tollTotal,
-        oneWayTotal,
+        oneWayTotal: oneWayTollTotal,
         multiplier: tollMultiplier,
         plazas: detectedPlazas,
         source: "local_toll_table",

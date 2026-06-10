@@ -1,0 +1,34 @@
+JM Guinchos v28-4 - rota, cache e checklist do motorista
+
+Arquivos alterados:
+- js/utils.js
+- js/app.js
+- js/motorista.js
+- css/style.css
+- service-worker.js
+- jm.html
+- motorista.html
+- index.html
+- superadmin.html
+- cliente-chamado.html
+- relatorio.html
+- LISTA_ARQUIVOS_ALTERADOS_V28_4.txt
+
+Validacoes executadas:
+- node --check js/app.js
+- node --check js/utils.js
+- node --check js/google-maps.js
+- node --check js/mapa.js
+- node --check js/firebase.js
+- node --check js/tracker.js
+- node --check js/superadmin.js
+- node --check js/motorista.js
+- node --check js/toll-plazas.js
+- node --check service-worker.js
+- Teste funcional do roteador: rota vazia retorna null; rota valida retorna osrm_openstreetmap com distancia e geometria.
+- Teste HTTP local: jm.html, motorista.html, app.js, utils.js, style.css e service-worker.js servindo a versao jm-v28-4-rota-checklist-hotfix.
+
+Observacoes:
+- A rota quebrava porque campos vazios de latitude/longitude eram tratados como 0,0.
+- Pedagio estimado depende de pracas ativas em js/toll-plazas.js ou em settings.tollPlazas; o exemplo local continua inativo por seguranca.
+- O motorista agora finaliza com sinal de cobranca a faturar quando o chamado tem valor e provas completas.
